@@ -1014,39 +1014,67 @@ void main() {
         function handleOrientation(event) {
             if (event.beta === null || event.gamma === null) return;
             gyroActive = true;
-            let angle = (screen.orientation ? screen.orientation.angle : window.orientation) || 0;
-            let b = event.beta; let g = event.gamma;
+            
+            // PILLAR 4: ROBUST ORIENTATION MAPPING
+            let angle = 0;
+            try {
+                angle = (window.screen && window.screen.orientation) ? window.screen.orientation.angle : (window.orientation || 0);
+            } catch(e) { angle = window.orientation || 0; }
+            
+            let b = event.beta; 
+            let g = event.gamma;
 
-            if (lastBeta !== null && Math.abs(b - lastBeta) > 60) b = lastBeta;
-            if (lastGamma !== null && Math.abs(g - lastGamma) > 60) g = lastGamma;
+            // Simple low-pass filtering/gate to prevent erratic jumps
+            if (lastBeta !== null && Math.abs(b - lastBeta) > 80) b = lastBeta;
+            if (lastGamma !== null && Math.abs(g - lastGamma) > 80) g = lastGamma;
 
             lastBeta = b; lastGamma = g;
-            b = Math.max(-85, Math.min(85, b));
-            g = Math.max(-85, Math.min(85, g));
+            
+            // Constrain input to prevent extreme camera flips
+            b = Math.max(-90, Math.min(90, b));
+            g = Math.max(-90, Math.min(90, g));
 
             let finalX = 0, finalY = 0;
-            const TILT_DIVISOR = 60.0;
+            const TILT_DIVISOR = 45.0; // Increased sensitivity
 
+            // Map sensors based on screen rotation
             if (angle === 90) {
-                finalX = b / TILT_DIVISOR; finalY = (g + 45.0) / TILT_DIVISOR;
+                finalX = b / TILT_DIVISOR; 
+                finalY = (g + 45.0) / TILT_DIVISOR;
             } else if (angle === -90 || angle === 270) {
-                finalX = -b / TILT_DIVISOR; finalY = -(g - 45.0) / TILT_DIVISOR;
+                finalX = -b / TILT_DIVISOR; 
+                finalY = -(g - 45.0) / TILT_DIVISOR;
             } else {
-                finalX = g / TILT_DIVISOR; finalY = (b - 45.0) / TILT_DIVISOR;
+                finalX = g / TILT_DIVISOR; 
+                finalY = (b - 45.0) / TILT_DIVISOR;
             }
 
-            targetMX = Math.max(-1.5, Math.min(1.5, finalX));
-            targetMY = Math.max(-0.9, Math.min(0.9, finalY));
+            targetMX = Math.max(-2.0, Math.min(2.0, finalX));
+            targetMY = Math.max(-1.2, Math.min(1.2, finalY));
         }
 
         function unlockAudio() {
             if (audioInit) return;
             audioInit = true;
 
-            if (isMobile && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(state => {
-                    if (state === 'granted') window.addEventListener('deviceorientation', handleOrientation);
-                }).catch(console.error);
+            // PILLAR 4: UNIVERSAL GYRO INITIALIZATION
+            if (isMobile && typeof DeviceOrientationEvent !== 'undefined') {
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    // Modern iOS path
+                    DeviceOrientationEvent.requestPermission()
+                        .then(state => {
+                            if (state === 'granted') window.addEventListener('deviceorientation', handleOrientation);
+                            else console.warn("Gyroscope permission denied");
+                        })
+                        .catch(err => console.error("Gyroscope error:", err));
+                } else {
+                    // Android and legacy device path
+                    window.addEventListener('deviceorientation', handleOrientation);
+                }
+            }
+
+            if (!window.isSecureContext && isMobile) {
+                console.warn("Sensors may be blocked: Not a secure context (HTTPS/localhost)");
             }
 
             const AudioContext = window.AudioContext || window.webkitAudioContext;
