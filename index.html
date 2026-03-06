@@ -21,6 +21,12 @@
             -webkit-touch-callout: none;
             height: 100dvh;
             /* Pillar 6: Dynamic Viewport Height */
+
+            /* SPECTRAL GLOW TOKENS - INTENSIFIED */
+            --glow-1: rgba(180, 215, 255, 0.4);
+            --glow-2: rgba(255, 250, 230, 0.45);
+            --glow-3: rgba(140, 255, 240, 0.25);
+            --glow-active: rgba(255, 255, 255, 0.8);
         }
 
         canvas {
@@ -88,13 +94,10 @@
         }
 
         @keyframes visual-pulse {
-
-            0%,
-            100% {
+            0%, 100% {
                 transform: scale(1);
                 box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
             }
-
             50% {
                 transform: scale(1.05);
                 box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
@@ -106,7 +109,6 @@
                 transform: translate(-50%, -50%) scale(0.5);
                 opacity: 1;
             }
-
             100% {
                 transform: translate(-50%, -50%) scale(2);
                 opacity: 0;
@@ -118,7 +120,6 @@
                 transform: translate(-50%, -50%) scale(0.5);
                 opacity: 0.8;
             }
-
             100% {
                 transform: translate(-50%, -50%) scale(2.5);
                 opacity: 0;
@@ -149,7 +150,6 @@
                 opacity: 0.3;
                 letter-spacing: 15px;
             }
-
             100% {
                 opacity: 1;
                 letter-spacing: 20px;
@@ -157,15 +157,8 @@
         }
 
         @keyframes hint-fade {
-
-            0%,
-            100% {
-                opacity: 0.3;
-            }
-
-            50% {
-                opacity: 0.8;
-            }
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
         }
 
         /* STANDARD UI */
@@ -186,18 +179,48 @@
             text-align: center;
         }
 
+        /* --- RAHATIL TITLE: NATURAL SHIFTING FLOW --- */
         h1 {
             font-weight: 100;
             letter-spacing: 35px;
             color: rgba(255, 252, 248, 0.95);
-            /* Softened from harsh pure white */
             margin: 0;
             font-size: 3.2rem;
             text-transform: uppercase;
-            text-shadow: 0 8px 40px rgba(0, 0, 5, 0.4), 0 0 25px rgba(220, 235, 255, 0.15);
-            /* More diffused, environmental ambient shadow */
+            
+            background: linear-gradient(
+                110deg,
+                rgba(255, 252, 248, 0.7) 0%,
+                rgba(160, 235, 255, 0.95) 25%,
+                rgba(255, 255, 255, 1) 50%,
+                rgba(180, 255, 240, 0.95) 75%,
+                rgba(255, 252, 248, 0.7) 100%
+            );
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+
+            text-shadow: 0 8px 40px rgba(0, 0, 5, 0.6), 0 0 30px var(--glow-1);
+            animation: spectral-flow 6s linear infinite;
+            will-change: background-position, text-shadow;
         }
 
+        @keyframes spectral-flow {
+            0% {
+                background-position: 200% center;
+                text-shadow: 0 8px 40px rgba(0, 0, 5, 0.6), 0 0 25px var(--glow-1);
+            }
+            50% {
+                text-shadow: 0 8px 50px rgba(0, 0, 10, 0.7), 0 0 45px var(--glow-2), 0 0 25px var(--glow-3);
+            }
+            100% {
+                background-position: 0% center;
+                text-shadow: 0 8px 40px rgba(0, 0, 5, 0.6), 0 0 25px var(--glow-1);
+            }
+        }
+
+        /* --- INITIALIZE BUTTON: TIDAL GLOW FLOW --- */
         .btn-init {
             margin-top: 80px;
             pointer-events: auto;
@@ -206,11 +229,41 @@
             font-size: 0.7rem;
             letter-spacing: 15px;
             text-transform: uppercase;
-            opacity: 0.55;
-            transition: 0.4s;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
-            text-shadow: 0 4px 15px rgba(0, 0, 8, 0.5);
-            /* Deepened and diffused */
+            
+            background: linear-gradient(
+                90deg,
+                rgba(255, 252, 248, 0.5) 0%,
+                rgba(140, 255, 240, 0.95) 30%,
+                rgba(255, 255, 255, 1) 50%,
+                rgba(180, 215, 255, 0.95) 70%,
+                rgba(255, 252, 248, 0.5) 100%
+            );
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+
+            text-shadow: 0 4px 15px rgba(0, 0, 8, 0.6), 0 0 15px var(--glow-3);
+            animation: btn-glow-flow 4s linear infinite;
+        }
+
+        @keyframes btn-glow-flow {
+            0% {
+                background-position: 200% center;
+                opacity: 0.6;
+                text-shadow: 0 4px 15px rgba(0, 0, 8, 0.6), 0 0 10px var(--glow-3);
+            }
+            50% {
+                opacity: 0.95;
+                text-shadow: 0 4px 25px rgba(0, 0, 10, 0.7), 0 0 20px var(--glow-1), 0 0 10px var(--glow-2);
+            }
+            100% {
+                background-position: 0% center;
+                opacity: 0.6;
+                text-shadow: 0 4px 15px rgba(0, 0, 8, 0.6), 0 0 10px var(--glow-3);
+            }
         }
 
         .btn-init::after {
@@ -228,12 +281,67 @@
         .btn-init:hover {
             opacity: 1;
             letter-spacing: 20px;
+            -webkit-text-fill-color: #fff;
+            text-shadow: 0 0 40px var(--glow-active), 0 4px 20px rgba(0, 0, 0, 0.9);
+            animation: none;
         }
 
         .btn-init:hover::after {
             width: 100%;
             left: 0;
             opacity: 1;
+        }
+
+        /* --- INTERACTION HINT (DISCOVERABILITY UX) --- */
+        #swipe-hint {
+            position: absolute;
+            bottom: 12%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            /* Delays appearance by 2.5s so it doesn't clutter the majestic initial load */
+            animation: hint-appear 2s ease forwards 2.5s;
+        }
+
+        .swipe-track {
+            width: 60px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .swipe-dot {
+            position: absolute;
+            top: -1px;
+            left: 0;
+            width: 15px;
+            height: 3px;
+            border-radius: 2px;
+            background: rgba(160, 235, 255, 0.95);
+            box-shadow: 0 0 10px rgba(160, 235, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.5);
+            animation: swipe-dot-move 2.5s ease-in-out infinite;
+        }
+
+        .swipe-text {
+            color: rgba(255, 252, 248, 0.45);
+            font-size: 0.55rem;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        @keyframes swipe-dot-move {
+            0% { left: 0%; opacity: 0; transform: translateX(-50%); }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { left: 100%; opacity: 0; transform: translateX(-50%); }
+        }
+
+        @keyframes hint-appear {
+            to { opacity: 1; }
         }
 
         #cinematic-layer {
@@ -260,7 +368,6 @@
             letter-spacing: 15px;
             text-transform: uppercase;
             text-shadow: 0 8px 35px rgba(0, 0, 10, 0.45), 0 0 30px rgba(220, 235, 255, 0.15);
-            /* Environmental blend */
             opacity: 0;
             transform: translateY(20px);
             transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -270,7 +377,6 @@
         .cine-sub {
             font-size: 0.65rem;
             color: rgba(220, 225, 235, 0.85);
-            /* Slightly cooler/softer environmental subtext */
             letter-spacing: 12px;
             text-transform: uppercase;
             opacity: 0;
@@ -370,22 +476,10 @@
             box-sizing: border-box;
         }
 
-        .panel-box::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .panel-box::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .panel-box::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-        }
-
-        .panel-box::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
+        .panel-box::-webkit-scrollbar { width: 6px; }
+        .panel-box::-webkit-scrollbar-track { background: transparent; }
+        .panel-box::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+        .panel-box::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
 
         .panel-box h3 {
             margin: 0 0 5px 0;
@@ -482,34 +576,13 @@
             transition: 0.3s;
         }
 
-        .btn-panel:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
+        .btn-panel:hover { background: rgba(255, 255, 255, 0.2); }
+        .btn-reset { color: #ffa0a0; border-color: rgba(255, 100, 100, 0.3); }
+        .btn-reset:hover { background: rgba(255, 100, 100, 0.15); border-color: rgba(255, 100, 100, 0.6); }
+        .btn-deploy { background: rgba(74, 222, 128, 0.15); border-color: rgba(74, 222, 128, 0.4); color: #4ade80; }
+        .btn-deploy:hover { background: rgba(74, 222, 128, 0.25); border-color: rgba(74, 222, 128, 0.7); }
 
-        .btn-reset {
-            color: #ffa0a0;
-            border-color: rgba(255, 100, 100, 0.3);
-        }
-
-        .btn-reset:hover {
-            background: rgba(255, 100, 100, 0.15);
-            border-color: rgba(255, 100, 100, 0.6);
-        }
-
-        .btn-deploy {
-            background: rgba(74, 222, 128, 0.15);
-            border-color: rgba(74, 222, 128, 0.4);
-            color: #4ade80;
-        }
-
-        .btn-deploy:hover {
-            background: rgba(74, 222, 128, 0.25);
-            border-color: rgba(74, 222, 128, 0.7);
-        }
-
-        select.text-input {
-            cursor: pointer;
-        }
+        select.text-input { cursor: pointer; }
 
         @media (max-width: 768px) {
             h1 {
@@ -524,56 +597,24 @@
                 margin-top: 50px;
             }
 
-            .btn-init:hover {
-                letter-spacing: 12px;
-            }
+            .btn-init:hover { letter-spacing: 12px; }
 
-            .cine-title {
-                font-size: 1.5rem;
-                letter-spacing: 8px;
-            }
+            .cine-title { font-size: 1.5rem; letter-spacing: 8px; }
+            .cine-sub { font-size: 0.5rem; letter-spacing: 6px; }
 
-            .cine-sub {
-                font-size: 0.5rem;
-                letter-spacing: 6px;
-            }
+            #cinematic-layer.active .cine-title { letter-spacing: 15px; }
 
-            #cinematic-layer.active .cine-title {
-                letter-spacing: 15px;
-            }
-
-            .panel-box {
-                padding: 20px;
-                gap: 12px;
-            }
-
-            .panel-box h3 {
-                font-size: 1rem;
-                letter-spacing: 5px;
-            }
+            .panel-box { padding: 20px; gap: 12px; }
+            .panel-box h3 { font-size: 1rem; letter-spacing: 5px; }
         }
 
-        /* PILLAR 6: ULTRA-MOBILE LANDSCAPE SCALING */
         @media (max-height: 500px) and (orientation: landscape) {
-            h1 {
-                font-size: 1.8rem;
-                letter-spacing: 12px;
-            }
-
-            .btn-init {
-                margin-top: 30px;
-                font-size: 0.55rem;
-                letter-spacing: 8px;
-            }
-
-            .panel-box {
-                padding: 15px;
-                gap: 8px;
-            }
-
-            .slider-group label {
-                font-size: 0.6rem;
-            }
+            h1 { font-size: 1.8rem; letter-spacing: 12px; }
+            .btn-init { margin-top: 30px; font-size: 0.55rem; letter-spacing: 8px; }
+            .panel-box { padding: 15px; gap: 8px; }
+            .slider-group label { font-size: 0.6rem; }
+            
+            #swipe-hint { bottom: 5%; } /* Keep hint visible on ultra short screens */
         }
     </style>
 </head>
@@ -592,6 +633,12 @@
         <div class="brand-text">
             <h1 id="ui-mainTitle">RAHATIL</h1>
             <div class="btn-init" id="ui-btnText" onclick="engage()">Initialize</div>
+        </div>
+        
+        <!-- NEW: Minimalist Sci-Fi Swipe Hint -->
+        <div id="swipe-hint">
+            <div class="swipe-track"><div class="swipe-dot"></div></div>
+            <div class="swipe-text">Swipe to explore</div>
         </div>
     </div>
 
@@ -685,14 +732,12 @@ uniform float u_time;
 uniform vec2 u_mouse;
 uniform float u_warp;
 uniform float u_waveTime;
-uniform float u_warmup; // Hardcore Hardening: Skip noise during init
+uniform float u_warmup; 
 
 uniform vec3 u_waterColor;
 uniform float u_waveEnergy;
 uniform float u_waveHeight;
 uniform float u_starDensity;
-
-// DYNAMIC PERFORMANCE GOVERNOR (Tells the shader to kill heavy math)
 uniform float u_quality;
 
 #define PI 3.14159265359
@@ -715,7 +760,7 @@ float GetWaterHeight(vec3 p, bool micro) {
     
     vec2 d1 = normalize(vec2(1.0, 1.2));
     float w1 = sin(dot(uv, d1) * 1.5 + t * 0.8) * 0.5 + 0.5;
-    h += u_waveHeight * 1.5 * (w1 * w1) * (0.85 + 0.3 * nVal); // Removed slow pow() function
+    h += u_waveHeight * 1.5 * (w1 * w1) * (0.85 + 0.3 * nVal); 
     
     vec2 d2 = normalize(vec2(-1.0, 0.8));
     float w2 = sin(dot(uv, d2) * 2.8 - t * 1.2) * 0.5 + 0.5;
@@ -744,7 +789,7 @@ float GetWaterHeight(vec3 p, bool micro) {
     return h - (u_waveHeight * 0.5);
 }
 
-// OPTIMIZED NORMALS: Skip micro-noise when calculating offsets to prevent 3x math multiplier
+// OPTIMIZED NORMALS
 vec3 GetNormal(vec3 p, bool micro) {
     vec2 e = vec2(0.02, 0.0);
     float h = GetWaterHeight(p, micro);
@@ -778,7 +823,6 @@ float getClouds(vec3 rd, float t, bool isRef) {
     
     float f = noise(uv);
     
-    // Save cycles on reflections or low-end phones
     if (u_quality > 0.6) {
         uv = mat2(1.6, 1.2, -1.2, 1.6) * uv;
         f += 0.5 * noise(uv + t * 0.03);
@@ -842,7 +886,6 @@ void main() {
     float sunMask = smoothstep(-0.05, 0.02, sunDir.y);
     float moonMask = smoothstep(-0.05, 0.02, moonDir.y);
 
-    // PILLAR 3: VERTICAL CULLING (Only do sky math if looking up)
     if (rd.y >= 0.0) {
         if(nightFactor > 0.01) {
             vec2 nebUV = rd.xz / (abs(rd.y) + 0.001);
@@ -868,7 +911,6 @@ void main() {
         vec3 moonUp = cross(moonDir, moonRight);
         vec2 moonUV = vec2(dot(rd, moonRight), dot(rd, moonUp)) * 45.0;
         
-        // Turn off moon craters on low end phones
         float craters = 0.5;
         if (u_quality > 0.7) craters = noise(moonUV * 8.0) * 0.6 + noise(moonUV * 20.0) * 0.4;
         
@@ -881,7 +923,6 @@ void main() {
         col += vec3(0.04, 0.05, 0.1) * (pow(moonDot, 8.0) * 0.15 + pow(moonDot, 25.0) * 0.08) * trueNight;
     }
 
-    // PILLAR 3: VERTICAL CULLING (Only calculate water if looking down)
     if(rd.y < 0.0) {
         float d = -(ro.y) / min(rd.y, -0.002); 
         vec3 p = ro + rd * d;
@@ -896,7 +937,6 @@ void main() {
         vec3 refR_Planar = reflect(rd, vec3(0, 1, 0)); 
         vec3 reflectedSky = mix(horizon, zenith, smoothstep(-0.2, 0.6, reflect(rd, N_smooth).y));
         
-        // Turn off reflection stars to save performance
         if(nightFactor > 0.01 && u_quality > 0.8) {
             reflectedSky += vec3(0.04, 0.015, 0.06) * noise(refR_Planar.xz * 2.0) * nightFactor * smoothstep(0.0, 0.3, refR_Planar.y);
             reflectedSky += GetStars(refR_Planar, nightFactor, true);
@@ -909,7 +949,6 @@ void main() {
         float waveLocalH = GetWaterHeight(p, false);
         
         vec3 tidalColor = mix(u_waterColor * 0.2, u_waterColor * 2.2, smoothstep(-u_waveHeight, u_waveHeight * 1.5, waveLocalH));
-        // Inject tidalColor into night water to reveal wave structures in the dark
         vec3 nightWater = mix(vec3(0.000, 0.001, 0.003) + tidalColor * 0.05, vec3(0.015, 0.035, 0.085) + tidalColor * 0.25, max(0.0, moonDir.y));
         vec3 waterBase = mix(nightWater, tidalColor, dayFactor);
         
@@ -926,7 +965,6 @@ void main() {
         
         waterCol += vec3(0.5, 0.65, 0.85) * moonSpecIntensity * trueNight * moonMask;
         
-        // Boost diffuse moon lighting over the tidal structures
         float diffuseMoon = max(0.0, dot(N_smooth, waterMoonDir));
         waterCol += (vec3(0.02, 0.028, 0.05) + tidalColor * 0.15) * (diffuseMoon * 0.4) * trueNight;
         
@@ -944,7 +982,6 @@ void main() {
         const CLOUD_SAVE_ENDPOINT = "https://your-api-endpoint.com/v1/config";
         const CLOUD_AUTH_BEARER = "";
 
-        // GLOBAL FRAME AND FPS TIMING RESTORED
         let totalFrames = 0;
         let framesAnalyzed = 0;
         let droppedFrames = 0;
@@ -961,12 +998,9 @@ void main() {
         let isPaused = false;
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-        // PILLAR 5: DYNAMIC RESOLUTION (Warm-up phase for mobile)
         let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2.0);
-        let currentDPR = isMobile ? 1.0 : baseDPR; // Start conservative on mobile
-
-        // PILLAR 4: SHADER LOD GOVERNOR
-        let globalQuality = isMobile ? 0.6 : 1.0; // Start conservative on mobile
+        let currentDPR = isMobile ? 1.0 : baseDPR; 
+        let globalQuality = isMobile ? 0.6 : 1.0; 
 
         const configKeys =['energy', 'height', 'stars', 'r', 'g', 'b'];
         const textKeys =['mainTitle', 'btnText', 'cineTitle', 'cineSub1', 'cineSub2', 'targetUrl'];
@@ -1016,7 +1050,7 @@ void main() {
         let audioInitTimer = null, animFrameId = null;
         let currentDayFactor = 0.5, currentNightFactor = 0.5;
         let lastBeta = null, lastGamma = null;
-        let gyroBaseline = { set: false };
+        let gyroBaseline = { b: 0, g: 0, set: false };
         let gyroFiltered = { x: 0, y: 0.2 }; 
         let lastGyroTime = 0;
 
@@ -1041,80 +1075,56 @@ void main() {
             if (uiLayer) uiLayer.style.display = 'flex';
         }
 
-        // PILLAR 4: PERFECTED GYRO KINEMATICS
         function handleOrientation(event) {
             if (event.beta === null || event.gamma === null) return;
+            const now = Date.now();
+            const dt = Math.min(50, now - (lastGyroTime || now)) / 1000;
+            lastGyroTime = now;
             gyroActive = true;
 
-            // 1. GET SCREEN ANGLE 
-            let angle = 0;
-            try {
-                angle = (window.screen && window.screen.orientation) ? window.screen.orientation.angle : (window.orientation || 0);
-            } catch (e) { angle = window.orientation || 0; }
-
-            let beta = event.beta;
-            let gamma = event.gamma;
-
-            // 2. INITIALIZE BASELINE
             if (!gyroBaseline.set) {
-                lastBeta = beta;
-                lastGamma = gamma;
+                gyroBaseline.b = event.beta;
+                gyroBaseline.g = event.gamma;
                 gyroBaseline.set = true;
-                
-                // Seamlessly adopt current camera position to prevent snapping upon initialization
-                gyroFiltered.x = targetMX;
-                gyroFiltered.y = targetMY;
-                return;
             }
 
-            // 3. CALCULATE FRAME DELTAS
-            let db = beta - lastBeta;
-            let dg = gamma - lastGamma;
-            
-            lastBeta = beta;
-            lastGamma = gamma;
+            let angle = 0;
+            try { angle = (window.screen && window.screen.orientation) ? window.screen.orientation.angle : (window.orientation || 0); } catch (e) { angle = window.orientation || 0; }
 
-            // 4. DISCONTINUITY REJECTION (Anti-Gimbal-Lock / Axis-Wrap Protection)
-            // Device physically cannot rotate >45 degrees in ~16ms. This catches internal sensor flips/wraps.
-            if (Math.abs(db) > 45 || Math.abs(dg) > 45) return;
+            let b = event.beta - gyroBaseline.b;
+            let g = event.gamma - gyroBaseline.g;
 
-            // 5. LOW-PASS FILTER ON DELTAS (Micro-jitter elimination without lag)
-            db = Math.abs(db) < 0.08 ? 0 : db; 
-            dg = Math.abs(dg) < 0.08 ? 0 : dg;
+            if (lastBeta !== null && Math.abs(b - lastBeta) > 40) b = lastBeta + (b - lastBeta) * 0.1;
+            if (lastGamma !== null && Math.abs(g - lastGamma) > 40) g = lastGamma + (g - lastGamma) * 0.1;
+            lastBeta = b; lastGamma = g;
 
-            // 6. KINEMATIC MAPPING (Device orientation to Screen Space Coordinates)
-            const SENS_X = 40.0; // Hand-tuned for natural 1:1 rotation feel
-            const SENS_Y = 40.0;
-            let dx = 0, dy = 0;
+            b = Math.max(-90, Math.min(90, b));
+            g = Math.max(-90, Math.min(90, g));
 
-            if (angle === 90) {
-                dx = db / SENS_X; dy = -dg / SENS_Y;
-            } else if (angle === -90 || angle === 270) {
-                dx = -db / SENS_X; dy = dg / SENS_Y;
-            } else if (angle === 180) {
-                dx = -dg / SENS_X; dy = -db / SENS_Y;
-            } else {
-                dx = dg / SENS_X; dy = db / SENS_Y; // Portrait
-            }
+            let rawX = 0, rawY = 0;
+            const TILT_SENSITIVITY = 40.0;
 
-            // 7. ACCUMULATE
-            gyroFiltered.x += dx;
-            gyroFiltered.y += dy;
+            if (angle === 90) { rawX = b / TILT_SENSITIVITY; rawY = (g + 30.0) / TILT_SENSITIVITY; } 
+            else if (angle === -90 || angle === 270) { rawX = -b / TILT_SENSITIVITY; rawY = -(g - 30.0) / TILT_SENSITIVITY; } 
+            else { rawX = g / TILT_SENSITIVITY; rawY = (b - 30.0) / TILT_SENSITIVITY; }
 
-            // 8. SOFT LIMITS (Matches original expanded kinematic limits)
-            const MAX_X = 2.5;
-            const MAX_Y = 1.5;
-            gyroFiltered.x = Math.max(-MAX_X, Math.min(MAX_X, gyroFiltered.x));
-            gyroFiltered.y = Math.max(-MAX_Y, Math.min(MAX_Y, gyroFiltered.y));
+            const alpha = 0.18;
+            gyroFiltered.x = gyroFiltered.x + (rawX - gyroFiltered.x) * alpha;
+            gyroFiltered.y = gyroFiltered.y + (rawY - gyroFiltered.y) * alpha;
 
-            // 9. COMMIT TO TARGET
-            targetMX = gyroFiltered.x;
-            targetMY = gyroFiltered.y;
+            const maxDelta = 0.15;
+            targetMX += Math.max(-maxDelta, Math.min(maxDelta, gyroFiltered.x - targetMX));
+            targetMY += Math.max(-maxDelta, Math.min(maxDelta, gyroFiltered.y - targetMY));
+
+            const driftRate = 0.002 * dt;
+            gyroBaseline.b += (event.beta - (gyroBaseline.b + 30.0 / TILT_SENSITIVITY)) * driftRate;
+            gyroBaseline.g += (event.gamma - gyroBaseline.g) * driftRate;
+
+            targetMX = Math.max(-2.5, Math.min(2.5, targetMX));
+            targetMY = Math.max(-1.5, Math.min(1.5, targetMY));
         }
 
-        window.addEventListener('orientationchange', () => {
-            gyroBaseline.set = false; // Relock baseline gracefully on rotate
-        });
+        window.addEventListener('orientationchange', () => { gyroBaseline.set = false; });
 
         function unlockAudio() {
             if (audioInit) return;
@@ -1122,21 +1132,12 @@ void main() {
 
             if (isMobile && typeof DeviceOrientationEvent !== 'undefined') {
                 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    // Modern iOS path
-                    DeviceOrientationEvent.requestPermission()
-                        .then(state => {
-                            if (state === 'granted') window.addEventListener('deviceorientation', handleOrientation);
-                            else console.warn("Gyroscope permission denied");
-                        })
-                        .catch(err => console.error("Gyroscope error:", err));
+                    DeviceOrientationEvent.requestPermission().then(state => {
+                        if (state === 'granted') window.addEventListener('deviceorientation', handleOrientation);
+                    }).catch(err => console.error("Gyroscope error:", err));
                 } else {
-                    // Android and legacy device path
                     window.addEventListener('deviceorientation', handleOrientation);
                 }
-            }
-
-            if (!window.isSecureContext && isMobile) {
-                console.warn("Sensors may be blocked: Not a secure context (HTTPS/localhost)");
             }
 
             const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -1159,7 +1160,6 @@ void main() {
         document.addEventListener('click', unlockAudio, { once: true });
 
         function buildAudioGraph() {
-            // PILLAR 5: AUDIO HARDENING (Smaller buffer + Staggered init)
             const bufferSize = Math.floor(audioCtx.sampleRate * 0.8);
             if (audioCtx.createStereoPanner) {
                 try {
@@ -1170,7 +1170,6 @@ void main() {
             }
             let audioDest = masterPanner ? masterPanner : audioCtx.destination;
 
-            // STAGGERED INITIALIZATION
             setTimeout(() => {
                 const waterBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const waterOut = waterBuffer.getChannelData(0);
@@ -1237,8 +1236,19 @@ void main() {
             }, 300);
         }
 
-        // PILLAR 2: PASSIVE LISTENERS
+        // --- UX ENHANCEMENT: DISMISS HINT ON INTERACTION ---
+        function hideInteractionHint() {
+            const hint = document.getElementById('swipe-hint');
+            if (hint) {
+                hint.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+                hint.style.opacity = '0';
+                hint.style.transform = 'translateY(10px)';
+                setTimeout(() => hint.remove(), 800);
+            }
+        }
+
         window.addEventListener('touchstart', (e) => {
+            hideInteractionHint();
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
             isTouching = true; lastTouchTime = Date.now();
             mX = ((e.touches[0].clientX / window.innerWidth) * 2 - 1) * 1.5;
@@ -1246,6 +1256,7 @@ void main() {
         }, { passive: true });
 
         window.addEventListener('touchmove', (e) => {
+            hideInteractionHint();
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
             isTouching = true; lastTouchTime = Date.now();
             mX = ((e.touches[0].clientX / window.innerWidth) * 2 - 1) * 1.5;
@@ -1256,6 +1267,7 @@ void main() {
         window.addEventListener('touchcancel', () => { isTouching = false; }, { passive: true });
 
         window.onmousemove = (e) => {
+            hideInteractionHint();
             if (isMobile) return;
             mX = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5;
             mY = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
@@ -1272,22 +1284,18 @@ void main() {
 
         function resizeCanvas() {
             if (!gl) return;
-            if (animFrameId) {
-                cancelAnimationFrame(animFrameId);
-            }
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            
             canvas.width = window.innerWidth * currentDPR;
             canvas.height = window.innerHeight * currentDPR;
             gl.viewport(0, 0, canvas.width, canvas.height);
+            
             if (prg && uLocs.res) {
                 gl.useProgram(prg);
                 gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-                if (typeof globalQuality !== 'undefined') {
-                    gl.uniform1f(uLocs.quality, globalQuality);
-                }
+                if (typeof globalQuality !== 'undefined') gl.uniform1f(uLocs.quality, globalQuality);
             }
-            if (typeof render === "function" && gl) {
-                animFrameId = requestAnimationFrame(render);
-            }
+            if (typeof render === "function" && gl) animFrameId = requestAnimationFrame(render);
         }
 
         const compile = (t, s) => {
@@ -1320,7 +1328,6 @@ void main() {
             uLocs.mouse = gl.getUniformLocation(prg, 'u_mouse');
             uLocs.warp = gl.getUniformLocation(prg, 'u_warp');
             uLocs.wTime = gl.getUniformLocation(prg, 'u_waveTime');
-
             uLocs.wColor = gl.getUniformLocation(prg, 'u_waterColor');
             uLocs.wEnergy = gl.getUniformLocation(prg, 'u_waveEnergy');
             uLocs.wHeight = gl.getUniformLocation(prg, 'u_waveHeight');
@@ -1341,12 +1348,13 @@ void main() {
             if (isW || !gl || document.getElementById('custom-panel').style.display === 'flex') return;
 
             if (audioInitTimer) { clearTimeout(audioInitTimer); audioInitTimer = null; }
-
             if (!audioInit) unlockAudio();
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 
             isW = true;
             document.getElementById('ui-layer').style.opacity = '0';
+            hideInteractionHint(); // Also hide if they just click the button
+            
             if (!isMobile) {
                 document.getElementById('cursor').style.transform = 'translate(-50%, -50%) scale(2.0)';
                 document.getElementById('cursor').style.opacity = '0.3';
@@ -1368,10 +1376,10 @@ void main() {
             if (waterGain && audioCtx) {
                 let ct = audioCtx.currentTime;
                 waterGain.gain.cancelScheduledValues(ct); waterGain.gain.setValueAtTime(waterGain.gain.value, ct); waterGain.gain.linearRampToValueAtTime(0, ct + 1.5);
-                if (windGain) { windGain.gain.linearRampToValueAtTime(0, ct + 1.5); }
-                if (ambientGain) { ambientGain.gain.linearRampToValueAtTime(0, ct + 1.5); }
-                if (nightGain) { nightGain.gain.linearRampToValueAtTime(0, ct + 1.0); }
-                if (droneGain) { droneGain.gain.linearRampToValueAtTime(0, ct + 2.0); }
+                if (windGain) windGain.gain.linearRampToValueAtTime(0, ct + 1.5);
+                if (ambientGain) ambientGain.gain.linearRampToValueAtTime(0, ct + 1.5);
+                if (nightGain) nightGain.gain.linearRampToValueAtTime(0, ct + 1.0);
+                if (droneGain) droneGain.gain.linearRampToValueAtTime(0, ct + 2.0);
             }
 
             if (audioCtx) {
@@ -1392,41 +1400,31 @@ void main() {
             if (isPaused || !gl) return;
 
             let elapsed = now - lastTime;
-            // Add a 1.5ms tolerance margin for 60Hz/120Hz displays to prevent dropping frames due to RAF variance
             if (elapsed < frameInterval - 1.5) return;
             lastTime = now - (elapsed % frameInterval);
 
             let dtJS = Math.min(now - (lastTimeJS || now), 50);
             lastTimeJS = now; waveTime += (dtJS * 0.001) * engineConfig.energy;
-
             let dtFactor = Math.min(elapsed, 50) / 16.666;
 
-            // PILLAR 5: DYNAMIC SHADER GOVERNOR
             totalFrames++;
-            let analysisInterval = (totalFrames < 300) ? 15 : 60; // Hyper-analyze during warm-up
+            let analysisInterval = (totalFrames < 300) ? 15 : 60; 
 
             if (totalFrames > 30) {
                 if (framesAnalyzed >= analysisInterval) {
                     let frameHealth = (analysisInterval - droppedFrames) / analysisInterval;
 
                     if (frameHealth < 0.7 && currentDPR > 1.0) {
-                        currentDPR = Math.max(1.0, currentDPR - 0.25);
-                        resizeCanvas();
+                        currentDPR = Math.max(1.0, currentDPR - 0.25); resizeCanvas();
                     } else if (frameHealth > 0.9 && currentDPR < baseDPR) {
-                        currentDPR = Math.min(baseDPR, currentDPR + (totalFrames < 300 ? 0.25 : 0.1));
-                        resizeCanvas();
+                        currentDPR = Math.min(baseDPR, currentDPR + (totalFrames < 300 ? 0.25 : 0.1)); resizeCanvas();
                     }
-
-                    // Force the Shader to drop heavy math if frame times are bad
-                    if (frameHealth < 0.8) {
-                        globalQuality = Math.max(0.4, globalQuality - 0.1);
-                    } else if (frameHealth > 0.95) {
-                        globalQuality = Math.min(1.0, globalQuality + 0.05);
-                    }
+                    if (frameHealth < 0.8) globalQuality = Math.max(0.4, globalQuality - 0.1);
+                    else if (frameHealth > 0.95) globalQuality = Math.min(1.0, globalQuality + 0.05);
 
                     framesAnalyzed = 0; droppedFrames = 0;
                 }
-                if (dtJS > 22) droppedFrames++; // More aggressive drop detection
+                if (dtJS > 22) droppedFrames++;
                 framesAnalyzed++;
             }
 
@@ -1463,7 +1461,6 @@ void main() {
                     let panTarget = Math.max(-1.0, Math.min(1.0, mX * 0.8));
                     masterPanner.pan.setTargetAtTime(panTarget, audioCtx.currentTime, 0.2);
                 }
-
                 if (waterFilter && waterSource && waterGain) {
                     let targetWaterFreq = 250 + (waveCycle * 100) + (engineConfig.height * 600) - (mY * 150);
                     waterFilter.frequency.setTargetAtTime(Math.max(150, targetWaterFreq), audioCtx.currentTime, 0.1);
@@ -1535,7 +1532,6 @@ void main() {
             }
         });
 
-        let syncDebounce;
         configKeys.forEach(k => {
             document.getElementById(`inp-${k}`).addEventListener('input', (e) => {
                 lastTouchTime = Date.now();
@@ -1560,99 +1556,6 @@ void main() {
         }
 
         function closeAdminPanel() { document.getElementById('custom-panel').style.display = 'none'; }
-        function showDeployPanel() { document.getElementById('custom-panel').style.display = 'none'; document.getElementById('deploy-panel').style.display = 'flex'; loadDeploySettings(); }
-        function closeDeployPanel() { document.getElementById('deploy-panel').style.display = 'none'; }
-
-        const deployMethodEl = document.getElementById('deploy-method');
-        if (deployMethodEl) {
-            deployMethodEl.addEventListener('change', function (e) {
-                document.getElementById('deploy-ftp-fields').style.display = e.target.value === 'ftp' ? 'block' : 'none';
-            });
-        }
-
-        try {
-            const saved = localStorage.getItem('rahatil_ftp_config');
-            if (saved) {
-                const cfg = JSON.parse(saved);
-                document.getElementById('deploy-ftp-host').value = cfg.ftpHost || '';
-                document.getElementById('deploy-ftp-user').value = cfg.ftpUser || '';
-                document.getElementById('deploy-ftp-path').value = cfg.ftpPath || '/public_html/index.html';
-            }
-        } catch (e) { }
-
-        function loadDeploySettings() {
-            try {
-                const saved = localStorage.getItem('rahatil_deploy_config');
-                if (saved) {
-                    const config = JSON.parse(saved);
-                    document.getElementById('deploy-method').value = config.method || 'download';
-                    document.getElementById('deploy-ftp-host').value = config.ftpHost || '';
-                    document.getElementById('deploy-ftp-user').value = config.ftpUser || '';
-                    document.getElementById('deploy-ftp-path').value = config.ftpPath || '/public_html/index.html';
-                }
-            } catch (e) { }
-            if (document.getElementById('deploy-method')) {
-                document.getElementById('deploy-method').dispatchEvent(new Event('change'));
-            }
-        }
-
-        async function deployToCloud() {
-            const method = document.getElementById('deploy-method').value;
-            const status = document.getElementById('deploy-status');
-            status.style.display = 'block'; status.style.color = '#4ade80'; status.innerHTML = '⏳ Preparing your configured file...';
-
-            const clone = document.documentElement.cloneNode(true);
-            const authModal = clone.querySelector('#auth-modal');
-            if (authModal) authModal.style.display = 'none';
-            const customPanel = clone.querySelector('#custom-panel');
-            if (customPanel) customPanel.style.display = 'none';
-            const deployPanel = clone.querySelector('#deploy-panel');
-            if (deployPanel) { deployPanel.style.display = 'none'; deployPanel.parentNode.removeChild(deployPanel); }
-            const introLayer = clone.querySelector('#intro-layer');
-            if (introLayer) { introLayer.style.display = 'flex'; introLayer.style.opacity = '1'; introLayer.style.pointerEvents = 'auto'; }
-            const uiLayer = clone.querySelector('#ui-layer');
-            if (uiLayer) { uiLayer.style.opacity = '1'; }
-            const cinematicLayer = clone.querySelector('#cinematic-layer');
-            if (cinematicLayer) { cinematicLayer.classList.remove('active'); cinematicLayer.style.opacity = '0'; }
-
-            let htmlContent = clone.outerHTML;
-
-            try {
-                const ftpConfig = {
-                    ftpHost: document.getElementById('deploy-ftp-host').value,
-                    ftpUser: document.getElementById('deploy-ftp-user').value,
-                    ftpPath: document.getElementById('deploy-ftp-path').value
-                };
-                localStorage.setItem('rahatil_ftp_config', JSON.stringify(ftpConfig));
-
-                if (method === 'download') {
-                    const blob = new Blob([htmlContent], { type: 'text/html' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url; a.download = 'index.html';
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    status.innerHTML = '✅ <strong>Download Ready!</strong><br><span style="color:#888;font-size:0.65rem;">1. Upload "index.html" to your server<br>2. Your site is live!</span>';
-                    return;
-                }
-
-                if (method === 'ftp') {
-                    const host = document.getElementById('deploy-ftp-host').value;
-                    const user = document.getElementById('deploy-ftp-user').value;
-                    const pass = document.getElementById('deploy-ftp-pass').value;
-                    const path = document.getElementById('deploy-ftp-path').value || '/index.html';
-
-                    if (!host || !user || !pass) { status.innerHTML = '⚠️ Please enter FTP Host, Username & Password'; status.style.color = '#f87171'; return; }
-                    status.innerHTML = `✅ <strong>Ready to Upload!</strong><br>
-                        <span style="color:#888;font-size:0.6rem;">
-                        FTP Details saved for next time.<br><br>
-                        <strong>Quick Upload:</strong><br>
-                        1. Click <a href="#" onclick="document.getElementById('deploy-method').value='download'; deployToCloud(); return false;" style="color:#4ade80;">Direct Download</a><br>
-                        2. Upload index.html to: <strong>${host}${path}</strong><br>
-                        </span>`;
-                }
-            } catch (e) { status.innerHTML = '⚠️ Error: ' + e.message; status.style.color = '#f87171'; }
-        }
     </script>
 </body>
 
