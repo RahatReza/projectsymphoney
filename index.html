@@ -801,19 +801,71 @@ vec3 GetNormal(vec3 p, bool micro) {
     ));
 }
 
-float GetStars(vec3 rd, float nightFactor, bool isRef) {
+// OPTIMIZED COLORED STARS WITH NATURAL TWINKLE
+vec3 GetStars(vec3 rd, float nightFactor, bool isRef) {
     vec3 starRd = isRef ? normalize(vec3(rd.x, abs(rd.y), rd.z)) : rd;
-    vec2 starUV = starRd.xz / (abs(starRd.y) + 0.001);
+    vec2 starUV = vec2(atan(starRd.x, starRd.z) * 0.5, starRd.y);
     
-    float baseHash = hash(starUV);
-    float stars = pow(baseHash, isRef ? u_starDensity * 1.33 : u_starDensity);
+    float gridRes = 350.0;
+    vec2 gId = floor(starUV * gridRes);
+    vec2 gUv = fract(starUV * gridRes) - 0.5;
+
+    float baseHash = hash(gId);
+    float densityFactor = isRef ? u_starDensity * 1.33 : u_starDensity;
+    float starIntensity = pow(baseHash, densityFactor * 0.15);
     
-    float starPhase = hash(starUV + vec2(45.2, 12.8)) * PI * 2.0;
-    float starFreq = hash(starUV + vec2(9.3, 74.1)) * 2.5 + 0.5;
-    float twinkle = 0.5 + 0.5 * sin(u_time * starFreq + starPhase);
+    float starSize = 0.02 + hash(gId + vec2(17.3, 89.7)) * 0.1;
+    float starShape = smoothstep(starSize, 0.0, length(gUv));
+    
+    float stars = starIntensity * starShape * 10.0;
+    
+    float starPhase = hash(gId + vec2(45.2, 12.8)) * PI * 2.0;
+    float starFreq = 0.6 + hash(gId + vec2(9.3, 74.1)) * 2.0;
+    float twinkle = 0.55 + 0.45 * sin(u_time * starFreq + starPhase);
+    twinkle = pow(twinkle, 0.8);
+    
+    float colorSeed = hash(gId + vec2(137.2, 43.8));
+    vec3 starColor = mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.95, 0.8), colorSeed);
+    starColor = mix(starColor, vec3(1.0, 0.8, 0.6), pow(colorSeed, 2.5) * 0.25);
     
     float warpFade = 1.0 - smoothstep(0.1, 0.7, u_warp);
-    return stars * twinkle * nightFactor * (isRef ? 0.3 : 1.2) * warpFade;
+    float refMult = isRef ? 0.25 : 1.0;
+    return stars * twinkle * nightFactor * refMult * warpFade * starColor;
+}
+
+vec3 GetMeteors(vec3 rd, float nightFactor) {
+    if (nightFactor < 0.05 || u_warp > 0.3) return vec3(0.0);
+    
+    vec3 meteorColor = vec3(0.0);
+    float seedBase = floor(u_time * 0.15);
+    
+    for (int i = 0; i < 2; i++) {
+        float fi = float(i);
+        float seed = hash(vec2(seedBase + fi * 17.0, fi * 31.0));
+        
+        if (seed < 0.72) continue;
+        
+        float progress = fract(u_time * 0.1 + seed * 7.0);
+        if (progress < 0.08 || progress > 0.85) continue;
+        
+        float sx = -2.0 + seed * 4.0;
+        float ang = -0.3 - seed * 0.4;
+        
+        float px = sx + progress * 3.0 * cos(ang);
+        float py = 0.5 + progress * 1.8 * sin(ang);
+        
+        vec2 sUV = vec2(atan(rd.x, rd.z) * 0.5, rd.y);
+        float d = length(sUV - vec2(px, py));
+        float g = smoothstep(0.1, 0.0, d);
+        
+        float fi2 = smoothstep(0.0, 0.2, progress);
+        float fo2 = 1.0 - smoothstep(0.6, 1.0, progress);
+        
+        vec3 c = mix(vec3(0.7, 0.8, 1.0), vec3(1.0, 0.9, 0.7), seed);
+        meteorColor += c * g * fi2 * fo2 * nightFactor * 1.2;
+    }
+    
+    return meteorColor;
 }
 
 // CULLED CLOUD ENGINE
@@ -887,11 +939,12 @@ void main() {
     float moonMask = smoothstep(-0.05, 0.02, moonDir.y);
 
     if (rd.y >= 0.0) {
-        if(nightFactor > 0.01) {
+        if(trueNight > 0.05) {
             vec2 nebUV = rd.xz / (abs(rd.y) + 0.001);
             float neb = noise(nebUV * 2.0 + u_time * 0.01) * noise(nebUV * 4.0 - u_time * 0.01);
-            col += vec3(0.08, 0.03, 0.12) * neb * nightFactor * smoothstep(0.0, 0.3, rd.y) * 0.6 * (1.0 - smoothstep(0.2, 0.8, u_warp));
-            col += GetStars(rd, nightFactor, false) * smoothstep(-0.1, 0.2, rd.y);
+            col += vec3(0.08, 0.03, 0.12) * neb * trueNight * smoothstep(0.0, 0.3, rd.y) * 0.6 * (1.0 - smoothstep(0.2, 0.8, u_warp));
+            col += GetStars(rd, trueNight, false) * smoothstep(-0.1, 0.2, rd.y);
+            col += GetMeteors(rd, trueNight) * smoothstep(-0.1, 0.15, rd.y);
         }
 
         float cloudAlpha = getClouds(rd, u_time, false);
@@ -937,9 +990,10 @@ void main() {
         vec3 refR_Planar = reflect(rd, vec3(0, 1, 0)); 
         vec3 reflectedSky = mix(horizon, zenith, smoothstep(-0.2, 0.6, reflect(rd, N_smooth).y));
         
-        if(nightFactor > 0.01 && u_quality > 0.8) {
-            reflectedSky += vec3(0.04, 0.015, 0.06) * noise(refR_Planar.xz * 2.0) * nightFactor * smoothstep(0.0, 0.3, refR_Planar.y);
-            reflectedSky += GetStars(refR_Planar, nightFactor, true);
+        if(trueNight > 0.05 && u_quality > 0.8) {
+            reflectedSky += vec3(0.04, 0.015, 0.06) * noise(refR_Planar.xz * 2.0) * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
+            reflectedSky += GetStars(refR_Planar, trueNight, true);
+            reflectedSky += GetMeteors(refR_Planar, trueNight) * 0.4;
         }
 
         float refCloudAlpha = getClouds(refR_Planar, u_time, true);
