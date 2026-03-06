@@ -968,8 +968,8 @@ void main() {
         // PILLAR 4: SHADER LOD GOVERNOR
         let globalQuality = isMobile ? 0.6 : 1.0; // Start conservative on mobile
 
-        const configKeys = ['energy', 'height', 'stars', 'r', 'g', 'b'];
-        const textKeys = ['mainTitle', 'btnText', 'cineTitle', 'cineSub1', 'cineSub2', 'targetUrl'];
+        const configKeys =['energy', 'height', 'stars', 'r', 'g', 'b'];
+        const textKeys =['mainTitle', 'btnText', 'cineTitle', 'cineSub1', 'cineSub2', 'targetUrl'];
 
         const defaultConfig = {
             energy: 2.2, height: 0.05, stars: 600.0, r: 0.01, g: 0.04, b: 0.08,
@@ -1016,8 +1016,8 @@ void main() {
         let audioInitTimer = null, animFrameId = null;
         let currentDayFactor = 0.5, currentNightFactor = 0.5;
         let lastBeta = null, lastGamma = null;
-        let gyroBaseline = { b: 0, g: 0, set: false };
-        let gyroFiltered = { x: 0, y: 0.2 }; // EWMA state
+        let gyroBaseline = { set: false };
+        let gyroFiltered = { x: 0, y: 0.2 }; 
         let lastGyroTime = 0;
 
         window.enterExperience = function () {
@@ -1041,83 +1041,85 @@ void main() {
             if (uiLayer) uiLayer.style.display = 'flex';
         }
 
+        // PILLAR 4: PERFECTED GYRO KINEMATICS
         function handleOrientation(event) {
             if (event.beta === null || event.gamma === null) return;
-            const now = Date.now();
-            const dt = Math.min(50, now - (lastGyroTime || now)) / 1000;
-            lastGyroTime = now;
             gyroActive = true;
 
-            // PILLAR 4: HARDCORE GYRO STABILIZATION
-            if (!gyroBaseline.set) {
-                gyroBaseline.b = event.beta;
-                gyroBaseline.g = event.gamma;
-                gyroBaseline.set = true;
-            }
-
-            // GET SCREEN ANGLE (Robust Fallback)
+            // 1. GET SCREEN ANGLE 
             let angle = 0;
             try {
                 angle = (window.screen && window.screen.orientation) ? window.screen.orientation.angle : (window.orientation || 0);
             } catch (e) { angle = window.orientation || 0; }
 
-            // CALC RELATIVE (Relative to baseline)
-            let b = event.beta - gyroBaseline.b;
-            let g = event.gamma - gyroBaseline.g;
+            let beta = event.beta;
+            let gamma = event.gamma;
 
-            // FILTER: OUTLIER REJECTION (Prevents 1-frame snaps)
-            if (lastBeta !== null && Math.abs(b - lastBeta) > 40) b = lastBeta + (b - lastBeta) * 0.1;
-            if (lastGamma !== null && Math.abs(g - lastGamma) > 40) g = lastGamma + (g - lastGamma) * 0.1;
-            lastBeta = b; lastGamma = g;
-
-            // CONSTRAIN
-            b = Math.max(-90, Math.min(90, b));
-            g = Math.max(-90, Math.min(90, g));
-
-            let rawX = 0, rawY = 0;
-            const TILT_SENSITIVITY = 40.0;
-
-            // MAP BASED ON ROTATION
-            if (angle === 90) {
-                rawX = b / TILT_SENSITIVITY;
-                rawY = (g + 30.0) / TILT_SENSITIVITY;
-            } else if (angle === -90 || angle === 270) {
-                rawX = -b / TILT_SENSITIVITY;
-                rawY = -(g - 30.0) / TILT_SENSITIVITY;
-            } else {
-                rawX = g / TILT_SENSITIVITY;
-                rawY = (b - 30.0) / TILT_SENSITIVITY;
+            // 2. INITIALIZE BASELINE
+            if (!gyroBaseline.set) {
+                lastBeta = beta;
+                lastGamma = gamma;
+                gyroBaseline.set = true;
+                
+                // Seamlessly adopt current camera position to prevent snapping upon initialization
+                gyroFiltered.x = targetMX;
+                gyroFiltered.y = targetMY;
+                return;
             }
 
-            // EWMA FILTER (Exponential Weighted Moving Average)
-            // Alpha: High enough for response, low enough to kill jitter
-            const alpha = 0.18;
-            gyroFiltered.x = gyroFiltered.x + (rawX - gyroFiltered.x) * alpha;
-            gyroFiltered.y = gyroFiltered.y + (rawY - gyroFiltered.y) * alpha;
+            // 3. CALCULATE FRAME DELTAS
+            let db = beta - lastBeta;
+            let dg = gamma - lastGamma;
+            
+            lastBeta = beta;
+            lastGamma = gamma;
 
-            // VELOCITY CAPPING (Hard Limit on deg/frame)
-            const maxDelta = 0.15;
-            targetMX += Math.max(-maxDelta, Math.min(maxDelta, gyroFiltered.x - targetMX));
-            targetMY += Math.max(-maxDelta, Math.min(maxDelta, gyroFiltered.y - targetMY));
+            // 4. DISCONTINUITY REJECTION (Anti-Gimbal-Lock / Axis-Wrap Protection)
+            // Device physically cannot rotate >45 degrees in ~16ms. This catches internal sensor flips/wraps.
+            if (Math.abs(db) > 45 || Math.abs(dg) > 45) return;
 
-            // DRIFT COMPENSATION (Ultra-slow recenter)
-            const driftRate = 0.002 * dt;
-            gyroBaseline.b += (event.beta - (gyroBaseline.b + 30.0 / TILT_SENSITIVITY)) * driftRate;
-            gyroBaseline.g += (event.gamma - gyroBaseline.g) * driftRate;
+            // 5. LOW-PASS FILTER ON DELTAS (Micro-jitter elimination without lag)
+            db = Math.abs(db) < 0.08 ? 0 : db; 
+            dg = Math.abs(dg) < 0.08 ? 0 : dg;
 
-            targetMX = Math.max(-2.5, Math.min(2.5, targetMX));
-            targetMY = Math.max(-1.5, Math.min(1.5, targetMY));
+            // 6. KINEMATIC MAPPING (Device orientation to Screen Space Coordinates)
+            const SENS_X = 40.0; // Hand-tuned for natural 1:1 rotation feel
+            const SENS_Y = 40.0;
+            let dx = 0, dy = 0;
+
+            if (angle === 90) {
+                dx = db / SENS_X; dy = -dg / SENS_Y;
+            } else if (angle === -90 || angle === 270) {
+                dx = -db / SENS_X; dy = dg / SENS_Y;
+            } else if (angle === 180) {
+                dx = -dg / SENS_X; dy = -db / SENS_Y;
+            } else {
+                dx = dg / SENS_X; dy = db / SENS_Y; // Portrait
+            }
+
+            // 7. ACCUMULATE
+            gyroFiltered.x += dx;
+            gyroFiltered.y += dy;
+
+            // 8. SOFT LIMITS (Matches original expanded kinematic limits)
+            const MAX_X = 2.5;
+            const MAX_Y = 1.5;
+            gyroFiltered.x = Math.max(-MAX_X, Math.min(MAX_X, gyroFiltered.x));
+            gyroFiltered.y = Math.max(-MAX_Y, Math.min(MAX_Y, gyroFiltered.y));
+
+            // 9. COMMIT TO TARGET
+            targetMX = gyroFiltered.x;
+            targetMY = gyroFiltered.y;
         }
 
         window.addEventListener('orientationchange', () => {
-            gyroBaseline.set = false; // Relock baseline on rotate
+            gyroBaseline.set = false; // Relock baseline gracefully on rotate
         });
 
         function unlockAudio() {
             if (audioInit) return;
             audioInit = true;
 
-            // PILLAR 4: UNIVERSAL GYRO INITIALIZATION
             if (isMobile && typeof DeviceOrientationEvent !== 'undefined') {
                 if (typeof DeviceOrientationEvent.requestPermission === 'function') {
                     // Modern iOS path
