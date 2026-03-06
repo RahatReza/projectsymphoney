@@ -717,6 +717,45 @@
             </div>
         </div>
     </div>
+    
+    <div id="deploy-panel" class="overlay-layer">
+        <div class="panel-box">
+            <h3>Deploy Engine</h3>
+            <div class="slider-group">
+                <label>Method</label>
+                <select id="deploy-method" class="text-input">
+                    <option value="download">Direct Download (.html)</option>
+                    <option value="ftp">FTP Upload</option>
+                </select>
+            </div>
+            
+            <div id="deploy-ftp-fields" style="display:none; margin-top:10px;">
+                <div class="slider-group">
+                    <label>FTP Host</label>
+                    <input type="text" id="deploy-ftp-host" class="text-input" placeholder="ftp.yourdomain.com">
+                </div>
+                <div class="slider-group">
+                    <label>Username</label>
+                    <input type="text" id="deploy-ftp-user" class="text-input" placeholder="username">
+                </div>
+                <div class="slider-group">
+                    <label>Password</label>
+                    <input type="password" id="deploy-ftp-pass" class="text-input" placeholder="password">
+                </div>
+                <div class="slider-group">
+                    <label>Target Path</label>
+                    <input type="text" id="deploy-ftp-path" class="text-input" placeholder="/public_html/index.html">
+                </div>
+            </div>
+
+            <div id="deploy-status" style="margin-top:15px; font-size:0.75rem; text-align:center; display:none; padding:10px; border-radius:4px; background:rgba(0,0,0,0.3);"></div>
+
+            <div class="panel-buttons">
+                <button class="btn-panel btn-reset" onclick="closeDeployPanel()">Cancel</button>
+                <button class="btn-panel btn-deploy" onclick="deployToCloud()">Start Deploy</button>
+            </div>
+        </div>
+    </div>
 
     <!-- GLSL SHADER (EXTREME PERFORMANCE EDITION) -->
     <script id="fs" type="x-shader/x-fragment">#version 300 es
@@ -1049,10 +1088,7 @@ void main() {
         let audioInit = false, gyroActive = false, lastTouchTime = 0, targetMX = 0, targetMY = 0.2;
         let audioInitTimer = null, animFrameId = null;
         let currentDayFactor = 0.5, currentNightFactor = 0.5;
-        let lastBeta = null, lastGamma = null;
         let gyroBaseline = { b: 0, g: 0, set: false };
-        let gyroFiltered = { x: 0, y: 0.2 }; 
-        let lastGyroTime = 0;
 
         window.enterExperience = function () {
             const intro = document.getElementById('intro-layer');
@@ -1075,53 +1111,57 @@ void main() {
             if (uiLayer) uiLayer.style.display = 'flex';
         }
 
+        // --- FULLY REWRITTEN GYRO ENGINE (ZERO JITTER / NO STICKING) ---
         function handleOrientation(event) {
             if (event.beta === null || event.gamma === null) return;
-            const now = Date.now();
-            const dt = Math.min(50, now - (lastGyroTime || now)) / 1000;
-            lastGyroTime = now;
             gyroActive = true;
 
-            if (!gyroBaseline.set) {
-                gyroBaseline.b = event.beta;
-                gyroBaseline.g = event.gamma;
-                gyroBaseline.set = true;
-            }
-
+            // 1. Get screen orientation safely
             let angle = 0;
             try { angle = (window.screen && window.screen.orientation) ? window.screen.orientation.angle : (window.orientation || 0); } catch (e) { angle = window.orientation || 0; }
 
-            let b = event.beta - gyroBaseline.b;
-            let g = event.gamma - gyroBaseline.g;
+            // 2. Extract raw values (Limit beta to prevent upside-down gimbal lock flipping)
+            let b = Math.max(-90, Math.min(90, event.beta));
+            let g = event.gamma; 
 
-            if (lastBeta !== null && Math.abs(b - lastBeta) > 40) b = lastBeta + (b - lastBeta) * 0.1;
-            if (lastGamma !== null && Math.abs(g - lastGamma) > 40) g = lastGamma + (g - lastGamma) * 0.1;
-            lastBeta = b; lastGamma = g;
+            // 3. Set baseline on first read
+            if (!gyroBaseline.set) {
+                gyroBaseline.b = b;
+                gyroBaseline.g = g;
+                gyroBaseline.set = true;
+                return;
+            }
 
-            b = Math.max(-90, Math.min(90, b));
-            g = Math.max(-90, Math.min(90, g));
+            // 4. Drift compensation: Slowly update the baseline so resting position feels "center" over time
+            gyroBaseline.b += (b - gyroBaseline.b) * 0.005;
+            gyroBaseline.g += (g - gyroBaseline.g) * 0.005;
 
+            // 5. Calculate delta from baseline
+            let db = b - gyroBaseline.b;
+            let dg = g - gyroBaseline.g;
+
+            // 6. Map to Screen Coordinates based on Portrait/Landscape
             let rawX = 0, rawY = 0;
-            const TILT_SENSITIVITY = 40.0;
+            if (angle === 90) { 
+                rawX = db; rawY = -dg; 
+            } else if (angle === -90 || angle === 270) { 
+                rawX = -db; rawY = dg; 
+            } else { // Portrait
+                rawX = dg; rawY = db; 
+            }
 
-            if (angle === 90) { rawX = b / TILT_SENSITIVITY; rawY = (g + 30.0) / TILT_SENSITIVITY; } 
-            else if (angle === -90 || angle === 270) { rawX = -b / TILT_SENSITIVITY; rawY = -(g - 30.0) / TILT_SENSITIVITY; } 
-            else { rawX = g / TILT_SENSITIVITY; rawY = (b - 30.0) / TILT_SENSITIVITY; }
+            // 7. Scale down to Target Mouse space (+/- 45 degrees of physical tilt = edge of screen)
+            const SENSITIVITY = 45.0; 
+            let destX = (rawX / SENSITIVITY) * 1.5;
+            let destY = (rawY / SENSITIVITY) * 0.8;
 
-            const alpha = 0.18;
-            gyroFiltered.x = gyroFiltered.x + (rawX - gyroFiltered.x) * alpha;
-            gyroFiltered.y = gyroFiltered.y + (rawY - gyroFiltered.y) * alpha;
+            // 8. Clamp absolute bounds so the user doesn't flip the camera backwards
+            destX = Math.max(-1.5, Math.min(1.5, destX));
+            destY = Math.max(-0.8, Math.min(0.8, destY));
 
-            const maxDelta = 0.15;
-            targetMX += Math.max(-maxDelta, Math.min(maxDelta, gyroFiltered.x - targetMX));
-            targetMY += Math.max(-maxDelta, Math.min(maxDelta, gyroFiltered.y - targetMY));
-
-            const driftRate = 0.002 * dt;
-            gyroBaseline.b += (event.beta - (gyroBaseline.b + 30.0 / TILT_SENSITIVITY)) * driftRate;
-            gyroBaseline.g += (event.gamma - gyroBaseline.g) * driftRate;
-
-            targetMX = Math.max(-2.5, Math.min(2.5, targetMX));
-            targetMY = Math.max(-1.5, Math.min(1.5, targetMY));
+            // 9. Ultra-smooth low-pass filter (kills jitter natively without buggy velocity caps)
+            targetMX += (destX - targetMX) * 0.12;
+            targetMY += (destY - targetMY) * 0.12;
         }
 
         window.addEventListener('orientationchange', () => { gyroBaseline.set = false; });
@@ -1556,6 +1596,101 @@ void main() {
         }
 
         function closeAdminPanel() { document.getElementById('custom-panel').style.display = 'none'; }
+        function showDeployPanel() { document.getElementById('custom-panel').style.display = 'none'; document.getElementById('deploy-panel').style.display = 'flex'; loadDeploySettings(); }
+        function closeDeployPanel() { document.getElementById('deploy-panel').style.display = 'none'; }
+
+        const deployMethodEl = document.getElementById('deploy-method');
+        if (deployMethodEl) {
+            deployMethodEl.addEventListener('change', function (e) {
+                document.getElementById('deploy-ftp-fields').style.display = e.target.value === 'ftp' ? 'block' : 'none';
+            });
+        }
+
+        try {
+            const saved = localStorage.getItem('rahatil_ftp_config');
+            if (saved) {
+                const cfg = JSON.parse(saved);
+                document.getElementById('deploy-ftp-host').value = cfg.ftpHost || '';
+                document.getElementById('deploy-ftp-user').value = cfg.ftpUser || '';
+                document.getElementById('deploy-ftp-path').value = cfg.ftpPath || '/public_html/index.html';
+            }
+        } catch (e) { }
+
+        function loadDeploySettings() {
+            try {
+                const saved = localStorage.getItem('rahatil_deploy_config');
+                if (saved) {
+                    const config = JSON.parse(saved);
+                    document.getElementById('deploy-method').value = config.method || 'download';
+                    document.getElementById('deploy-ftp-host').value = config.ftpHost || '';
+                    document.getElementById('deploy-ftp-user').value = config.ftpUser || '';
+                    document.getElementById('deploy-ftp-path').value = config.ftpPath || '/public_html/index.html';
+                }
+            } catch (e) { }
+            if (document.getElementById('deploy-method')) {
+                document.getElementById('deploy-method').dispatchEvent(new Event('change'));
+            }
+        }
+
+        async function deployToCloud() {
+            const method = document.getElementById('deploy-method').value;
+            const status = document.getElementById('deploy-status');
+            status.style.display = 'block'; status.style.color = '#4ade80'; status.innerHTML = '⏳ Preparing your configured file...';
+
+            const clone = document.documentElement.cloneNode(true);
+            const authModal = clone.querySelector('#auth-modal');
+            if (authModal) authModal.style.display = 'none';
+            const customPanel = clone.querySelector('#custom-panel');
+            if (customPanel) customPanel.style.display = 'none';
+            const deployPanel = clone.querySelector('#deploy-panel');
+            if (deployPanel) { deployPanel.style.display = 'none'; deployPanel.parentNode.removeChild(deployPanel); }
+            const introLayer = clone.querySelector('#intro-layer');
+            if (introLayer) { introLayer.style.display = 'flex'; introLayer.style.opacity = '1'; introLayer.style.pointerEvents = 'auto'; }
+            const uiLayer = clone.querySelector('#ui-layer');
+            if (uiLayer) { uiLayer.style.opacity = '1'; }
+            const cinematicLayer = clone.querySelector('#cinematic-layer');
+            if (cinematicLayer) { cinematicLayer.classList.remove('active'); cinematicLayer.style.opacity = '0'; }
+            const swipeHint = clone.querySelector('#swipe-hint');
+            if (swipeHint) { swipeHint.style.opacity = '0'; swipeHint.parentNode.removeChild(swipeHint); }
+
+            let htmlContent = clone.outerHTML;
+
+            try {
+                const ftpConfig = {
+                    ftpHost: document.getElementById('deploy-ftp-host').value,
+                    ftpUser: document.getElementById('deploy-ftp-user').value,
+                    ftpPath: document.getElementById('deploy-ftp-path').value
+                };
+                localStorage.setItem('rahatil_ftp_config', JSON.stringify(ftpConfig));
+
+                if (method === 'download') {
+                    const blob = new Blob([htmlContent], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'index.html';
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    status.innerHTML = '✅ <strong>Download Ready!</strong><br><span style="color:#888;font-size:0.65rem;">1. Upload "index.html" to your server<br>2. Your site is live!</span>';
+                    return;
+                }
+
+                if (method === 'ftp') {
+                    const host = document.getElementById('deploy-ftp-host').value;
+                    const user = document.getElementById('deploy-ftp-user').value;
+                    const pass = document.getElementById('deploy-ftp-pass').value;
+                    const path = document.getElementById('deploy-ftp-path').value || '/index.html';
+
+                    if (!host || !user || !pass) { status.innerHTML = '⚠️ Please enter FTP Host, Username & Password'; status.style.color = '#f87171'; return; }
+                    status.innerHTML = `✅ <strong>Ready to Upload!</strong><br>
+                        <span style="color:#888;font-size:0.6rem;">
+                        FTP Details saved for next time.<br><br>
+                        <strong>Quick Upload:</strong><br>
+                        1. Click <a href="#" onclick="document.getElementById('deploy-method').value='download'; deployToCloud(); return false;" style="color:#4ade80;">Direct Download</a><br>
+                        2. Upload index.html to: <strong>${host}${path}</strong><br>
+                        </span>`;
+                }
+            } catch (e) { status.innerHTML = '⚠️ Error: ' + e.message; status.style.color = '#f87171'; }
+        }
     </script>
 </body>
 
