@@ -19,6 +19,8 @@
             cursor: none;
             touch-action: none;
             -webkit-touch-callout: none;
+            height: 100dvh;
+            /* Pillar 6: Dynamic Viewport Height */
         }
 
         canvas {
@@ -550,6 +552,29 @@
                 letter-spacing: 5px;
             }
         }
+
+        /* PILLAR 6: ULTRA-MOBILE LANDSCAPE SCALING */
+        @media (max-height: 500px) and (orientation: landscape) {
+            h1 {
+                font-size: 1.8rem;
+                letter-spacing: 12px;
+            }
+
+            .btn-init {
+                margin-top: 30px;
+                font-size: 0.55rem;
+                letter-spacing: 8px;
+            }
+
+            .panel-box {
+                padding: 15px;
+                gap: 8px;
+            }
+
+            .slider-group label {
+                font-size: 0.6rem;
+            }
+        }
     </style>
 </head>
 
@@ -660,6 +685,7 @@ uniform float u_time;
 uniform vec2 u_mouse;
 uniform float u_warp;
 uniform float u_waveTime;
+uniform float u_warmup; // Hardcore Hardening: Skip noise during init
 
 uniform vec3 u_waterColor;
 uniform float u_waveEnergy;
@@ -685,7 +711,7 @@ float GetWaterHeight(vec3 p, bool micro) {
     vec2 uv = p.xz * 0.75;
     
     // Only calculate noise if we strictly need micro detail (Saves 30% GPU)
-    float nVal = (micro && u_quality > 0.6) ? noise(uv * 0.3 + t * 0.1) : 0.5;
+    float nVal = (micro && u_quality > 0.6 && u_warmup < 0.5) ? noise(uv * 0.3 + t * 0.1) : 0.5;
     
     vec2 d1 = normalize(vec2(1.0, 1.2));
     float w1 = sin(dot(uv, d1) * 1.5 + t * 0.8) * 0.5 + 0.5;
@@ -988,7 +1014,9 @@ void main() {
         let droneSource, droneOsc, droneGain, masterPanner;
         let audioInit = false, gyroActive = false, lastTouchTime = 0, targetMX = 0, targetMY = 0.2;
         let audioInitTimer = null, animFrameId = null;
-        let currentDayFactor = 0.5, currentNightFactor = 0.5, lastBeta = null, lastGamma = null;
+        let currentDayFactor = 0.5, currentNightFactor = 0.5;
+        let lastBeta = null, lastGamma = null;
+        let gyroBaseline = { b: 0, g: 0, set: false };
 
         window.enterExperience = function () {
             const intro = document.getElementById('intro-layer');
@@ -1015,14 +1043,21 @@ void main() {
             if (event.beta === null || event.gamma === null) return;
             gyroActive = true;
 
-            // PILLAR 4: ROBUST ORIENTATION MAPPING
+            // PILLAR 4: HARDCORE GYRO HARDENING (Auto-Recenter)
+            if (!gyroBaseline.set) {
+                gyroBaseline.b = event.beta;
+                gyroBaseline.g = event.gamma;
+                gyroBaseline.set = true;
+            }
+
             let angle = 0;
             try {
                 angle = (window.screen && window.screen.orientation) ? window.screen.orientation.angle : (window.orientation || 0);
             } catch (e) { angle = window.orientation || 0; }
 
-            let b = event.beta;
-            let g = event.gamma;
+            // Calculate relative to baseline
+            let b = event.beta - gyroBaseline.b;
+            let g = event.gamma - gyroBaseline.g;
 
             // Simple low-pass filtering/gate to prevent erratic jumps
             if (lastBeta !== null && Math.abs(b - lastBeta) > 80) b = lastBeta;
@@ -1035,23 +1070,27 @@ void main() {
             g = Math.max(-90, Math.min(90, g));
 
             let finalX = 0, finalY = 0;
-            const TILT_DIVISOR = 45.0; // Increased sensitivity
+            const TILT_DIVISOR = 40.0; // Optimized sensitivity
 
             // Map sensors based on screen rotation
             if (angle === 90) {
                 finalX = b / TILT_DIVISOR;
-                finalY = (g + 45.0) / TILT_DIVISOR;
+                finalY = (g + 30.0) / TILT_DIVISOR;
             } else if (angle === -90 || angle === 270) {
                 finalX = -b / TILT_DIVISOR;
-                finalY = -(g - 45.0) / TILT_DIVISOR;
+                finalY = -(g - 30.0) / TILT_DIVISOR;
             } else {
                 finalX = g / TILT_DIVISOR;
-                finalY = (b - 45.0) / TILT_DIVISOR;
+                finalY = (b - 30.0) / TILT_DIVISOR;
             }
 
-            targetMX = Math.max(-2.0, Math.min(2.0, finalX));
-            targetMY = Math.max(-1.2, Math.min(1.2, finalY));
+            targetMX = Math.max(-2.5, Math.min(2.5, finalX));
+            targetMY = Math.max(-1.5, Math.min(1.5, finalY));
         }
+
+        window.addEventListener('orientationchange', () => {
+            gyroBaseline.set = false; // Relock baseline on rotate
+        });
 
         function unlockAudio() {
             if (audioInit) return;
@@ -1097,7 +1136,8 @@ void main() {
         document.addEventListener('click', unlockAudio, { once: true });
 
         function buildAudioGraph() {
-            const bufferSize = audioCtx.sampleRate * 2;
+            // PILLAR 5: AUDIO HARDENING (Smaller buffer + Staggered init)
+            const bufferSize = Math.floor(audioCtx.sampleRate * 0.8);
             if (audioCtx.createStereoPanner) {
                 try {
                     masterPanner = audioCtx.createStereoPanner();
@@ -1107,84 +1147,71 @@ void main() {
             }
             let audioDest = masterPanner ? masterPanner : audioCtx.destination;
 
-            const waterBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const waterOut = waterBuffer.getChannelData(0);
-            let lastOut = 0;
-            for (let i = 0; i < bufferSize; i++) {
-                let white = Math.random() * 2 - 1;
-                waterOut[i] = (lastOut + (0.02 * white)) / 1.02;
-                lastOut = waterOut[i]; waterOut[i] *= 3.5;
-            }
-            waterSource = audioCtx.createBufferSource();
-            waterSource.buffer = waterBuffer; waterSource.loop = true;
-            waterFilter = audioCtx.createBiquadFilter();
-            waterFilter.type = 'lowpass'; waterFilter.frequency.value = 400; waterFilter.Q.value = 0.5;
-            waterGain = audioCtx.createGain(); waterGain.gain.value = 0.0;
-            waterSource.connect(waterFilter).connect(waterGain).connect(audioDest);
-            waterSource.start(0);
-
-            const windBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const windOut = windBuffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) { windOut[i] = (Math.random() * 2 - 1) * 0.5; }
-            windSource = audioCtx.createBufferSource();
-            windSource.buffer = windBuffer; windSource.loop = true;
-            windFilter = audioCtx.createBiquadFilter();
-            windFilter.type = 'bandpass'; windFilter.frequency.value = 800; windFilter.Q.value = 0.3;
-            windGain = audioCtx.createGain(); windGain.gain.value = 0.0;
-            windSource.connect(windFilter).connect(windGain).connect(audioDest);
-            windSource.start(0);
-
-            const ambientBuffer = audioCtx.createBuffer(2, bufferSize, audioCtx.sampleRate);
-            for (let c = 0; c < 2; c++) {
-                const ambOut = ambientBuffer.getChannelData(c);
+            // STAGGERED INITIALIZATION
+            setTimeout(() => {
+                const waterBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const waterOut = waterBuffer.getChannelData(0);
+                let lastOut = 0;
                 for (let i = 0; i < bufferSize; i++) {
-                    let t = i / audioCtx.sampleRate;
-                    let pad = Math.sin(t * 55 * Math.PI * 2) * 0.1 + Math.sin(t * 82.5 * Math.PI * 2) * 0.08 + Math.sin(t * 110 * Math.PI * 2) * 0.06;
-                    ambOut[i] = (pad * 0.3) + (Math.random() * 2 - 1) * 0.02;
+                    let white = Math.random() * 2 - 1;
+                    waterOut[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = waterOut[i]; waterOut[i] *= 3.5;
                 }
-            }
-            ambientSource = audioCtx.createBufferSource();
-            ambientSource.buffer = ambientBuffer; ambientSource.loop = true;
-            ambientFilter = audioCtx.createBiquadFilter();
-            ambientFilter.type = 'lowpass'; ambientFilter.frequency.value = 2000;
-            ambientGain = audioCtx.createGain(); ambientGain.gain.value = 0.0;
-            ambientSource.connect(ambientFilter).connect(ambientGain).connect(audioDest);
-            ambientSource.start(0);
+                waterSource = audioCtx.createBufferSource();
+                waterSource.buffer = waterBuffer; waterSource.loop = true;
+                waterFilter = audioCtx.createBiquadFilter();
+                waterFilter.type = 'lowpass'; waterFilter.frequency.value = 400; waterFilter.Q.value = 0.5;
+                waterGain = audioCtx.createGain(); waterGain.gain.value = 0.0;
+                waterSource.connect(waterFilter).connect(waterGain).connect(audioDest);
+                waterSource.start(0);
+                waterGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 2.0);
+            }, 0);
 
-            const nightBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const nightOut = nightBuffer.getChannelData(0);
-            let lastNight = 0;
-            for (let i = 0; i < bufferSize; i++) {
-                let t = i / audioCtx.sampleRate;
-                let swell = Math.sin(t * 0.3) * 0.5 + 0.5; swell *= Math.sin(t * 0.17) * 0.5 + 0.5;
-                let n = Math.random() * 2 - 1;
-                let filtered = (lastNight + (0.01 * n)) / 1.01; lastNight = filtered;
-                let nightSound = (filtered * 0.8) * swell * 0.4 + (filtered * 0.8) * 0.2;
-                nightSound += Math.sin(t * 2.5 * Math.PI * 2) * 0.02 * swell;
-                nightOut[i] = nightSound * 0.6;
-            }
-            nightSource = audioCtx.createBufferSource();
-            nightSource.buffer = nightBuffer; nightSource.loop = true;
-            nightFilter = audioCtx.createBiquadFilter();
-            nightFilter.type = 'lowpass'; nightFilter.frequency.value = 400; nightFilter.Q.value = 0.5;
-            nightGain = audioCtx.createGain(); nightGain.gain.value = 0.0;
-            nightSource.connect(nightFilter).connect(nightGain).connect(audioDest);
-            nightSource.start(0);
+            setTimeout(() => {
+                const windBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const windOut = windBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) { windOut[i] = (Math.random() * 2 - 1) * 0.5; }
+                windSource = audioCtx.createBufferSource();
+                windSource.buffer = windBuffer; windSource.loop = true;
+                windFilter = audioCtx.createBiquadFilter();
+                windFilter.type = 'bandpass'; windFilter.frequency.value = 800; windFilter.Q.value = 0.3;
+                windGain = audioCtx.createGain(); windGain.gain.value = 0.0;
+                windSource.connect(windFilter).connect(windGain).connect(audioDest);
+                windSource.start(0);
+                windGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 2.5);
+            }, 100);
 
-            droneOsc = audioCtx.createOscillator(); droneOsc.type = 'sine'; droneOsc.frequency.value = 40;
-            const droneOsc2 = audioCtx.createOscillator(); droneOsc2.type = 'sine'; droneOsc2.frequency.value = 60;
-            const droneOsc3 = audioCtx.createOscillator(); droneOsc3.type = 'triangle'; droneOsc3.frequency.value = 80;
-            droneGain = audioCtx.createGain(); droneGain.gain.value = 0.0;
-            const droneFilter = audioCtx.createBiquadFilter(); droneFilter.type = 'lowpass'; droneFilter.frequency.value = 100;
-            droneOsc.connect(droneGain); droneOsc2.connect(droneGain); droneOsc3.connect(droneGain);
-            droneGain.connect(droneFilter).connect(audioDest);
-            droneOsc.start(0); droneOsc2.start(0); droneOsc3.start(0);
+            setTimeout(() => {
+                const ambientBuffer = audioCtx.createBuffer(2, bufferSize, audioCtx.sampleRate);
+                for (let c = 0; c < 2; c++) {
+                    const ambOut = ambientBuffer.getChannelData(c);
+                    for (let i = 0; i < bufferSize; i++) {
+                        let t = i / audioCtx.sampleRate;
+                        let pad = Math.sin(t * 55 * Math.PI * 2) * 0.1 + Math.sin(t * 82.5 * Math.PI * 2) * 0.08 + Math.sin(t * 110 * Math.PI * 2) * 0.06;
+                        ambOut[i] = (pad * 0.3) + (Math.random() * 2 - 1) * 0.02;
+                    }
+                }
+                ambientSource = audioCtx.createBufferSource();
+                ambientSource.buffer = ambientBuffer; ambientSource.loop = true;
+                ambientFilter = audioCtx.createBiquadFilter();
+                ambientFilter.type = 'lowpass'; ambientFilter.frequency.value = 2000;
+                ambientGain = audioCtx.createGain(); ambientGain.gain.value = 0.0;
+                ambientSource.connect(ambientFilter).connect(ambientGain).connect(audioDest);
+                ambientSource.start(0);
+                ambientGain.gain.setTargetAtTime(0.04, audioCtx.currentTime, 3.0);
+            }, 200);
 
-            let ct = audioCtx.currentTime;
-            waterGain.gain.setValueAtTime(0.0, ct); waterGain.gain.linearRampToValueAtTime(0.15, ct + 2.0);
-            windGain.gain.setValueAtTime(0.0, ct); windGain.gain.linearRampToValueAtTime(0.06, ct + 2.5);
-            ambientGain.gain.setValueAtTime(0.0, ct); ambientGain.gain.linearRampToValueAtTime(0.04, ct + 3.0);
-            droneGain.gain.setValueAtTime(0.0, ct); droneGain.gain.linearRampToValueAtTime(0.03, ct + 3.0);
+            setTimeout(() => {
+                droneOsc = audioCtx.createOscillator(); droneOsc.type = 'sine'; droneOsc.frequency.value = 40;
+                const droneOsc2 = audioCtx.createOscillator(); droneOsc2.type = 'sine'; droneOsc2.frequency.value = 60;
+                const droneOsc3 = audioCtx.createOscillator(); droneOsc3.type = 'triangle'; droneOsc3.frequency.value = 80;
+                droneGain = audioCtx.createGain(); droneGain.gain.value = 0.0;
+                const droneFilter = audioCtx.createBiquadFilter(); droneFilter.type = 'lowpass'; droneFilter.frequency.value = 100;
+                droneOsc.connect(droneGain); droneOsc2.connect(droneGain); droneOsc3.connect(droneGain);
+                droneGain.connect(droneFilter).connect(audioDest);
+                droneOsc.start(0); droneOsc2.start(0); droneOsc3.start(0);
+                droneGain.gain.setTargetAtTime(0.03, audioCtx.currentTime, 3.0);
+            }, 300);
         }
 
         // PILLAR 2: PASSIVE LISTENERS
@@ -1276,6 +1303,7 @@ void main() {
             uLocs.wHeight = gl.getUniformLocation(prg, 'u_waveHeight');
             uLocs.sDensity = gl.getUniformLocation(prg, 'u_starDensity');
             uLocs.quality = gl.getUniformLocation(prg, 'u_quality');
+            uLocs.warmup = gl.getUniformLocation(prg, 'u_warmup');
 
             resizeCanvas();
             return true;
@@ -1456,6 +1484,7 @@ void main() {
             gl.uniform1f(uLocs.wHeight, engineConfig.height);
             gl.uniform1f(uLocs.sDensity, engineConfig.stars);
             gl.uniform1f(uLocs.quality, globalQuality);
+            gl.uniform1f(uLocs.warmup, (totalFrames < 300) ? 1.0 : 0.0);
 
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
