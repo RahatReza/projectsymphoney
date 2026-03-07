@@ -301,7 +301,6 @@
             align-items: center;
             opacity: 0;
             pointer-events: none;
-            /* Delays appearance by 2.5s so it doesn't clutter the majestic initial load */
             animation: hint-appear 2s ease forwards 2.5s;
         }
 
@@ -585,25 +584,12 @@
         select.text-input { cursor: pointer; }
 
         @media (max-width: 768px) {
-            h1 {
-                font-size: 2.2rem;
-                letter-spacing: 18px;
-                margin-left: 18px;
-            }
-
-            .btn-init {
-                font-size: 0.6rem;
-                letter-spacing: 10px;
-                margin-top: 50px;
-            }
-
+            h1 { font-size: 2.2rem; letter-spacing: 18px; margin-left: 18px; }
+            .btn-init { font-size: 0.6rem; letter-spacing: 10px; margin-top: 50px; }
             .btn-init:hover { letter-spacing: 12px; }
-
             .cine-title { font-size: 1.5rem; letter-spacing: 8px; }
             .cine-sub { font-size: 0.5rem; letter-spacing: 6px; }
-
             #cinematic-layer.active .cine-title { letter-spacing: 15px; }
-
             .panel-box { padding: 20px; gap: 12px; }
             .panel-box h3 { font-size: 1rem; letter-spacing: 5px; }
         }
@@ -613,8 +599,7 @@
             .btn-init { margin-top: 30px; font-size: 0.55rem; letter-spacing: 8px; }
             .panel-box { padding: 15px; gap: 8px; }
             .slider-group label { font-size: 0.6rem; }
-            
-            #swipe-hint { bottom: 5%; } /* Keep hint visible on ultra short screens */
+            #swipe-hint { bottom: 5%; }
         }
     </style>
 </head>
@@ -635,7 +620,6 @@
             <div class="btn-init" id="ui-btnText" onclick="engage()">Initialize</div>
         </div>
         
-        <!-- NEW: Minimalist Sci-Fi Swipe Hint -->
         <div id="swipe-hint">
             <div class="swipe-track"><div class="swipe-dot"></div></div>
             <div class="swipe-text">Swipe to explore</div>
@@ -718,7 +702,7 @@
         </div>
     </div>
 
-    <!-- GLSL SHADER (EXTREME PERFORMANCE EDITION) -->
+    <!-- GLSL SHADER (ENTERPRISE SIMD VECTORIZED EDITION) -->
     <script id="fs" type="x-shader/x-fragment">#version 300 es
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -742,6 +726,10 @@ uniform float u_quality;
 
 #define PI 3.14159265359
 
+// Precomputed execution matrices
+const mat2 rotMicro = mat2(0.8, -0.6, 0.6, 0.8);
+const mat2 rotCloud = mat2(1.6, 1.2, -1.2, 1.6);
+
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 float noise(vec2 p) {
     vec2 i = floor(p); vec2 f = fract(p);
@@ -749,47 +737,48 @@ float noise(vec2 p) {
     return mix(mix(hash(i), hash(i+vec2(1,0)), u.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
 }
 
-// CULLED GERSTNER WAVES (Optimized for Mobile GPU)
+// HYPER-OPTIMIZED VECTORIZED GERSTNER WAVES
 float GetWaterHeight(vec3 p, bool micro) {
     float t = u_waveTime;
-    float h = 0.0;
     vec2 uv = p.xz * 0.75;
     
-    // Only calculate noise if we strictly need micro detail (Saves 30% GPU)
+    // Only calculate scalar noise if strictly needed
     float nVal = (micro && u_quality > 0.6 && u_warmup < 0.5) ? noise(uv * 0.3 + t * 0.1) : 0.5;
     
-    vec2 d1 = normalize(vec2(1.0, 1.2));
-    float w1 = sin(dot(uv, d1) * 1.5 + t * 0.8) * 0.5 + 0.5;
-    h += u_waveHeight * 1.5 * (w1 * w1) * (0.85 + 0.3 * nVal); 
+    // Vectorized evaluation mapping 3 standard trigonometric calls into 1 SIMD instruction
+    vec3 dots = vec3(
+        dot(uv, vec2(0.64018, 0.76822)) * 1.5 + t * 0.8,
+        dot(uv, vec2(-0.78086, 0.62469)) * 2.8 - t * 1.2,
+        dot(uv, vec2(0.19611, -0.98058)) * 5.0 + t * 1.5
+    );
     
-    vec2 d2 = normalize(vec2(-1.0, 0.8));
-    float w2 = sin(dot(uv, d2) * 2.8 - t * 1.2) * 0.5 + 0.5;
-    h += (u_waveHeight * 0.8) * (w2 * w2);
+    vec3 sines = sin(dots) * 0.5 + 0.5;
+    sines *= sines; 
     
-    vec2 d3 = normalize(vec2(0.3, -1.5));
-    float w3 = sin(dot(uv, d3) * 5.0 + t * 1.5) * 0.5 + 0.5;
-    h += (u_waveHeight * 0.4) * (w3 * w3);
+    vec3 amps = vec3(1.5 * (0.85 + 0.3 * nVal), 0.8, 0.4) * u_waveHeight;
+    float h = dot(sines, amps);
     
-    // PERFORMANCE CULLING: Drop 2 massive wave layers if phone lags
+    // Performance culling fallback conditionally executed
     if (u_quality > 0.8) {
-        vec2 d4 = normalize(vec2(-0.7, -0.5));
-        float w4 = sin(dot(uv, d4) * 3.5 + t * 0.6) * 0.5 + 0.5;
-        h += (u_waveHeight * 0.25) * (w4 * w4) * (0.8 + 0.4 * nVal);
-        
-        vec2 d5 = normalize(vec2(0.9, -0.3));
-        float w5 = sin(dot(uv, d5) * 8.0 - t * 2.0) * 0.5 + 0.5;
-        h += (u_waveHeight * 0.15) * (w5 * w5);
+        vec2 dots2 = vec2(
+            dot(uv, vec2(-0.8137, -0.5812)) * 3.5 + t * 0.6,
+            dot(uv, vec2(0.9486, -0.3162)) * 8.0 - t * 2.0
+        );
+        vec2 sines2 = sin(dots2) * 0.5 + 0.5;
+        sines2 *= sines2;
+        vec2 amps2 = vec2(0.25 * (0.8 + 0.4 * nVal), 0.15) * u_waveHeight;
+        h += dot(sines2, amps2);
     }
 
     if(micro && u_quality > 0.6) {
-        vec2 uv1 = mat2(0.8, -0.6, 0.6, 0.8) * uv * 8.0;
+        vec2 uv1 = rotMicro * uv * 8.0;
         h += (noise(uv1 + t) * 0.5) * (u_waveHeight * 0.18) * u_quality;
     }
     
     return h - (u_waveHeight * 0.5);
 }
 
-// OPTIMIZED NORMALS
+// OPTIMIZED NORMAL MAP GENERATOR
 vec3 GetNormal(vec3 p, bool micro) {
     vec2 e = vec2(0.02, 0.0);
     float h = GetWaterHeight(p, micro);
@@ -801,91 +790,71 @@ vec3 GetNormal(vec3 p, bool micro) {
     ));
 }
 
-// --- ORGANIC 3-LAYER STAR ENGINE ---
 vec3 GetStars(vec3 rd, float nightFactor, bool isRef) {
     vec3 starRd = isRef ? normalize(vec3(rd.x, abs(rd.y), rd.z)) : rd;
+    vec2 starUV = vec2(atan(starRd.x, starRd.z) * 0.5, starRd.y);
     
-    // Stereographic projection for stable sky mapping
-    vec2 starUV = starRd.xz / (abs(starRd.y) + 1.0);
-    
-    vec3 stars = vec3(0.0);
-    
-    // LAYER 1: Bright, Blueish, High-Twinkle Stars
-    vec2 gId1 = floor(starUV * 350.0);
-    vec2 gUv1 = fract(starUV * 350.0) - 0.5;
-    float h1 = hash(gId1);
-    vec2 off1 = vec2(hash(gId1 + 13.0), hash(gId1 + 71.0)) - 0.5;
-    float d1 = length(gUv1 - off1 * 0.7);
-    float int1 = pow(h1, u_starDensity * 0.1); 
-    float shape1 = smoothstep(0.15, 0.01, d1); 
-    stars += vec3(0.85, 0.95, 1.0) * shape1 * int1 * 6.0 * (0.4 + 0.6 * sin(u_time * 2.0 + h1 * 25.0));
-    
-    // LAYER 2: Warm, Yellowish, Slower Twinkle
-    vec2 gId2 = floor(starUV * 600.0 + 12.34);
-    vec2 gUv2 = fract(starUV * 600.0 + 12.34) - 0.5;
-    float h2 = hash(gId2);
-    vec2 off2 = vec2(hash(gId2 + 37.0), hash(gId2 + 91.0)) - 0.5;
-    float d2 = length(gUv2 - off2 * 0.7);
-    float int2 = pow(h2, u_starDensity * 0.15); 
-    float shape2 = smoothstep(0.12, 0.01, d2);
-    stars += vec3(1.0, 0.95, 0.85) * shape2 * int2 * 4.0 * (0.6 + 0.4 * sin(u_time * 1.2 + h2 * 15.0));
+    float gridRes = 350.0;
+    vec2 gId = floor(starUV * gridRes);
+    vec2 gUv = fract(starUV * gridRes) - 0.5;
 
-    // LAYER 3: Deep Background Micro-Stars
-    vec2 gId3 = floor(starUV * 1000.0);
-    vec2 gUv3 = fract(starUV * 1000.0) - 0.5;
-    float h3 = hash(gId3);
-    vec2 off3 = vec2(hash(gId3 + 42.0), hash(gId3 + 24.0)) - 0.5;
-    float d3 = length(gUv3 - off3 * 0.8);
-    float int3 = pow(h3, u_starDensity * 0.2);
-    float shape3 = smoothstep(0.1, 0.0, d3);
-    stars += vec3(1.0) * shape3 * int3 * 2.5;
+    float baseHash = hash(gId);
+    float densityFactor = isRef ? u_starDensity * 1.33 : u_starDensity;
+    float starIntensity = exp2(densityFactor * 0.15 * log2(baseHash + 0.0001));
+    
+    float starSize = 0.02 + hash(gId + vec2(17.3, 89.7)) * 0.1;
+    float starShape = smoothstep(starSize, 0.0, length(gUv));
+    
+    float stars = starIntensity * starShape * 10.0;
+    
+    float starPhase = hash(gId + vec2(45.2, 12.8)) * 6.28318;
+    float starFreq = 0.6 + hash(gId + vec2(9.3, 74.1)) * 2.0;
+    float twinkle = 0.55 + 0.45 * sin(u_time * starFreq + starPhase);
+    
+    float colorSeed = hash(gId + vec2(137.2, 43.8));
+    vec3 starColor = mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.95, 0.8), colorSeed);
+    starColor = mix(starColor, vec3(1.0, 0.8, 0.6), colorSeed * colorSeed * 0.25);
     
     float warpFade = 1.0 - smoothstep(0.1, 0.7, u_warp);
-    return stars * nightFactor * (isRef ? 0.3 : 1.0) * warpFade;
+    float refMult = isRef ? 0.25 : 1.0;
+    return stars * twinkle * nightFactor * refMult * warpFade * starColor;
 }
 
-// --- DYNAMIC METEOR ENGINE (Refined & Realistic) ---
-float Meteor(vec3 rd, float time) {
-    vec2 uv = rd.xz / (abs(rd.y) + 1.0);
+vec3 GetMeteors(vec3 rd, float nightFactor) {
+    if (nightFactor < 0.05 || u_warp > 0.3) return vec3(0.0);
     
-    // Rotate so meteors streak diagonally across the sky
-    mat2 rot = mat2(0.866, -0.5, 0.5, 0.866);
-    uv = rot * uv;
-    uv *= 15.0; 
+    vec3 meteorColor = vec3(0.0);
+    float seedBase = floor(u_time * 0.15);
     
-    float trackId = floor(uv.y);
-    float trackHash = hash(vec2(trackId, 8.88));
-    
-    // Slower, majestic speed modifier
-    float t = time * (0.6 + trackHash * 0.4) + trackHash * 133.7;
-    float cycle = floor(t);
-    float localT = fract(t);
-    
-    // Make them rarer so they feel special (0.975 threshold)
-    float meteorProb = hash(vec2(trackId, cycle));
-    
-    if (meteorProb > 0.975) {
-        float y = fract(uv.y) - 0.5;
-        // Adjusted travel distance for smooth speed
-        float x = uv.x - (localT * 12.0 - 2.0); 
+    for (int i = 0; i < 2; i++) {
+        float fi = float(i);
+        float seed = hash(vec2(seedBase + fi * 17.0, fi * 31.0));
         
-        // Render beautiful, long tail
-        if (x < 0.0 && x > -6.0) {
-            float fade = (1.0 + x / 6.0); 
-            float thickness = 0.015 * fade;
-            float core = smoothstep(thickness + 0.005, 0.0, abs(y));
-            float glow = smoothstep(thickness * 4.0 + 0.04, 0.0, abs(y));
-            
-            // Smooth fade in and out 
-            float lifeFade = smoothstep(0.0, 0.15, localT) * smoothstep(1.0, 0.7, localT);
-            
-            return (core * 3.0 + glow * 1.5) * fade * lifeFade;
-        }
+        if (seed < 0.72) continue;
+        
+        float progress = fract(u_time * 0.1 + seed * 7.0);
+        if (progress < 0.08 || progress > 0.85) continue;
+        
+        float sx = -2.0 + seed * 4.0;
+        float ang = -0.3 - seed * 0.4;
+        
+        float px = sx + progress * 3.0 * cos(ang);
+        float py = 0.5 + progress * 1.8 * sin(ang);
+        
+        vec2 sUV = vec2(atan(rd.x, rd.z) * 0.5, rd.y);
+        float d = length(sUV - vec2(px, py));
+        float g = smoothstep(0.1, 0.0, d);
+        
+        float fi2 = smoothstep(0.0, 0.2, progress);
+        float fo2 = 1.0 - smoothstep(0.6, 1.0, progress);
+        
+        vec3 c = mix(vec3(0.7, 0.8, 1.0), vec3(1.0, 0.9, 0.7), seed);
+        meteorColor += c * g * fi2 * fo2 * nightFactor * 1.2;
     }
-    return 0.0;
+    
+    return meteorColor;
 }
 
-// CULLED CLOUD ENGINE
 float getClouds(vec3 rd, float t, bool isRef) {
     vec2 uv = rd.xz / (rd.y + 0.001) * 0.4;
     uv.x -= t * 0.05;      
@@ -893,12 +862,12 @@ float getClouds(vec3 rd, float t, bool isRef) {
     float f = noise(uv);
     
     if (u_quality > 0.6) {
-        uv = mat2(1.6, 1.2, -1.2, 1.6) * uv;
+        uv = rotCloud * uv;
         f += 0.5 * noise(uv + t * 0.03);
     }
     
     if(!isRef && u_quality > 0.9) {
-        uv = mat2(1.6, 1.2, -1.2, 1.6) * uv;
+        uv = rotCloud * uv;
         f += 0.25 * noise(uv - t * 0.02);
     }
     
@@ -915,7 +884,7 @@ vec3 getCloudColor(vec3 rd, vec3 sunDir) {
     vec3 cColor = mix(cloudNight, mix(cloudSunset, cloudDay, smoothstep(-0.05, 0.25, sunDir.y)), cloudDayFact);
     
     float sDot = max(0.0, dot(rd, sunDir));
-    cColor += vec3(1.0, 0.6, 0.2) * pow(sDot, 5.0) * smoothstep(-0.1, 0.3, sunDir.y) * 0.5;
+    cColor += vec3(1.0, 0.6, 0.2) * exp2(5.0 * log2(sDot + 0.0001)) * smoothstep(-0.1, 0.3, sunDir.y) * 0.5;
     return cColor;
 }
 
@@ -923,7 +892,7 @@ void main() {
     vec2 uv = (gl_FragCoord.xy - 0.5 * u_res.xy) / u_res.y;
     float t = u_time * 0.3;
     
-    float shakeIntensity = pow(u_warp, 5.0) * 0.04;
+    float shakeIntensity = u_warp * u_warp * u_warp * u_warp * u_warp * 0.04;
     vec2 cameraShake = vec2(sin(u_time * 150.0), cos(u_time * 130.0)) * shakeIntensity;
     uv += cameraShake;
 
@@ -956,15 +925,12 @@ void main() {
     float moonMask = smoothstep(-0.05, 0.02, moonDir.y);
 
     if (rd.y >= 0.0) {
-        if(nightFactor > 0.01) {
-            vec2 nebUV_stereo = rd.xz / (abs(rd.y) + 1.0);
-            float neb = noise(nebUV_stereo * 4.0 + u_time * 0.01) * noise(nebUV_stereo * 8.0 - u_time * 0.01);
-            col += vec3(0.1, 0.04, 0.15) * neb * nightFactor * smoothstep(0.0, 0.3, rd.y) * 0.8 * (1.0 - smoothstep(0.2, 0.8, u_warp));
-            
-            col += GetStars(rd, nightFactor, false) * smoothstep(-0.1, 0.2, rd.y);
-            
-            float meteor = Meteor(rd, u_time);
-            col += vec3(0.6, 0.85, 1.0) * meteor * nightFactor * smoothstep(0.0, 0.2, rd.y) * (1.0 - smoothstep(0.2, 0.8, u_warp));
+        if(trueNight > 0.05) {
+            vec2 nebUV = rd.xz / (abs(rd.y) + 0.001);
+            float neb = noise(nebUV * 2.0 + u_time * 0.01) * noise(nebUV * 4.0 - u_time * 0.01);
+            col += vec3(0.08, 0.03, 0.12) * neb * trueNight * smoothstep(0.0, 0.3, rd.y) * 0.6 * (1.0 - smoothstep(0.2, 0.8, u_warp));
+            col += GetStars(rd, trueNight, false) * smoothstep(-0.1, 0.2, rd.y);
+            col += GetMeteors(rd, trueNight) * smoothstep(-0.1, 0.15, rd.y);
         }
 
         float cloudAlpha = getClouds(rd, u_time, false);
@@ -974,9 +940,10 @@ void main() {
         float sunAltD = max(0.0, sunDir.y);
         vec3 coreColor = mix(vec3(1.0, 0.7, 0.4), vec3(1.0, 0.98, 0.95), smoothstep(0.0, 0.3, sunAltD));
         vec3 glowColor = mix(vec3(1.0, 0.25, 0.05), vec3(1.0, 0.8, 0.5), smoothstep(0.0, 0.4, sunAltD));
+        
         vec3 cinematicSun = coreColor * (smoothstep(0.9985, 0.9998, sunDot) * 2.5);
-        cinematicSun += glowColor * (pow(sunDot, 180.0) * 1.5);            
-        cinematicSun += mix(vec3(1.0, 0.1, 0.0), glowColor, 0.5) * (pow(sunDot, 12.0) * 0.4);
+        cinematicSun += glowColor * (exp2(180.0 * log2(sunDot + 0.0001)) * 1.5);            
+        cinematicSun += mix(vec3(1.0, 0.1, 0.0), glowColor, 0.5) * (exp2(12.0 * log2(sunDot + 0.0001)) * 0.4);
         col += cinematicSun * sunMask;
         
         float moonDot = max(0.0, dot(rd, moonDir));
@@ -991,9 +958,9 @@ void main() {
         float moonDist = clamp((1.0 - moonDot) / (1.0 - 0.9993), 0.0, 1.0);
         
         vec3 cinematicMoon = moonSurface * sqrt(1.0 - moonDist * moonDist) * smoothstep(0.9993, 0.99945, moonDot) * 2.2; 
-        cinematicMoon += vec3(0.7, 0.85, 1.0) * (pow(moonDot, 250.0) * 1.2 + pow(moonDot, 70.0) * 0.5);
+        cinematicMoon += vec3(0.7, 0.85, 1.0) * (exp2(250.0 * log2(moonDot + 0.0001)) * 1.2 + exp2(70.0 * log2(moonDot + 0.0001)) * 0.5);
         col += cinematicMoon * trueNight * moonMask;
-        col += vec3(0.04, 0.05, 0.1) * (pow(moonDot, 8.0) * 0.15 + pow(moonDot, 25.0) * 0.08) * trueNight;
+        col += vec3(0.04, 0.05, 0.1) * (exp2(8.0 * log2(moonDot + 0.0001)) * 0.15 + exp2(25.0 * log2(moonDot + 0.0001)) * 0.08) * trueNight;
     }
 
     if(rd.y < 0.0) {
@@ -1010,19 +977,16 @@ void main() {
         vec3 refR_Planar = reflect(rd, vec3(0, 1, 0)); 
         vec3 reflectedSky = mix(horizon, zenith, smoothstep(-0.2, 0.6, reflect(rd, N_smooth).y));
         
-        if(nightFactor > 0.01 && u_quality > 0.8) {
-            vec2 refNebUV = refR_Planar.xz / (abs(refR_Planar.y) + 1.0);
-            reflectedSky += vec3(0.05, 0.02, 0.08) * noise(refNebUV * 4.0) * nightFactor * smoothstep(0.0, 0.3, refR_Planar.y);
-            reflectedSky += GetStars(refR_Planar, nightFactor, true);
-            
-            float refMeteor = Meteor(refR_Planar, u_time);
-            reflectedSky += vec3(0.6, 0.85, 1.0) * refMeteor * nightFactor * smoothstep(0.0, 0.2, refR_Planar.y);
+        if(trueNight > 0.05 && u_quality > 0.8) {
+            reflectedSky += vec3(0.04, 0.015, 0.06) * noise(refR_Planar.xz * 2.0) * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
+            reflectedSky += GetStars(refR_Planar, trueNight, true);
+            reflectedSky += GetMeteors(refR_Planar, trueNight) * 0.4;
         }
 
         float refCloudAlpha = getClouds(refR_Planar, u_time, true);
         if(refCloudAlpha > 0.0) reflectedSky = mix(reflectedSky, getCloudColor(refR_Planar, sunDir), refCloudAlpha * 0.55);
 
-        float fresnel = pow(1.0 - max(0.0, dot(-rd, N_sharp)), 5.0);
+        float fresnel = exp2(5.0 * log2(1.0 - max(0.0, dot(-rd, N_sharp)) + 0.0001));
         float waveLocalH = GetWaterHeight(p, false);
         
         vec3 tidalColor = mix(u_waterColor * 0.2, u_waterColor * 2.2, smoothstep(-u_waveHeight, u_waveHeight * 1.5, waveLocalH));
@@ -1035,10 +999,11 @@ void main() {
         vec3 waterMoonDir = normalize(vec3(moonDir.x, max(moonDir.y, 0.001), moonDir.z));
 
         float smoothSpecDot = max(0.0, dot(N_smooth, normalize(-rd + waterSunDir)));
-        waterCol += mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.9, 0.7), smoothstep(0.0, 0.3, waterSunDir.y)) * (pow(max(0.0, dot(N_spec, normalize(-rd + waterSunDir))), 400.0) * 4.5 + pow(smoothSpecDot, 80.0) * 0.8) * sunMask;
+        float specTermSun = exp2(400.0 * log2(max(0.0, dot(N_spec, normalize(-rd + waterSunDir))) + 0.0001)) * 4.5 + exp2(80.0 * log2(smoothSpecDot + 0.0001)) * 0.8;
+        waterCol += mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.9, 0.7), smoothstep(0.0, 0.3, waterSunDir.y)) * specTermSun * sunMask;
         
         float smoothMoonSpecDot = max(0.0, dot(N_smooth, normalize(-rd + waterMoonDir)));
-        float moonSpecIntensity = pow(max(0.0, dot(N_spec, normalize(-rd + waterMoonDir))), 500.0) * 2.5 + pow(smoothMoonSpecDot, 80.0) * 0.8;
+        float moonSpecIntensity = exp2(500.0 * log2(max(0.0, dot(N_spec, normalize(-rd + waterMoonDir))) + 0.0001)) * 2.5 + exp2(80.0 * log2(smoothMoonSpecDot + 0.0001)) * 0.8;
         
         waterCol += vec3(0.5, 0.65, 0.85) * moonSpecIntensity * trueNight * moonMask;
         
@@ -1063,6 +1028,11 @@ void main() {
         let framesAnalyzed = 0;
         let droppedFrames = 0;
         let lastTime = 0;
+        let analysisStartTime = performance.now();
+        
+        // Exact 60FPS Targeting Engine
+        const targetFPS = 60;
+        const frameInterval = 1000 / targetFPS;
 
         const canvas = document.getElementById('v');
         let gl, prg, isW = false, warp = 0, mX = 0, mY = 0.2, redirected = false;
@@ -1073,9 +1043,8 @@ void main() {
         let isPaused = false;
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-        // FIXED LAG SPIKES: Lock mobile DPR, entirely disable dynamic buffer reallocation mid-render.
-        // Mobile screens are ultra-dense; 1.25 looks stunning while taking 60% less GPU toll than 2.0.
-        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.25) : Math.min(window.devicePixelRatio, 2.0);
+        // ENTERPRISE SCALING: Capped at 1.0 DPR for mobile to maintain rendering bandwidth
+        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.0) : Math.min(window.devicePixelRatio, 2.0);
         let currentDPR = baseDPR; 
         let globalQuality = isMobile ? 0.6 : 1.0; 
 
@@ -1123,13 +1092,9 @@ void main() {
         let ambientSource, ambientFilter, ambientGain;
         let nightSource, nightFilter, nightGain;
         let droneSource, droneOsc, droneGain, masterPanner;
-        let audioInit = false, gyroActive = false, lastTouchTime = 0, targetMX = 0, targetMY = 0.2;
+        let audioInit = false, lastTouchTime = Date.now();
         let audioInitTimer = null, animFrameId = null;
         let currentDayFactor = 0.5, currentNightFactor = 0.5;
-        let lastBeta = null, lastGamma = null;
-        let gyroBaseline = { b: 0, g: 0, set: false };
-        let gyroFiltered = { x: 0, y: 0.2 }; 
-        let lastGyroTime = 0;
 
         window.enterExperience = function () {
             const intro = document.getElementById('intro-layer');
@@ -1152,70 +1117,9 @@ void main() {
             if (uiLayer) uiLayer.style.display = 'flex';
         }
 
-        function handleOrientation(event) {
-            if (event.beta === null || event.gamma === null) return;
-            const now = Date.now();
-            const dt = Math.min(50, now - (lastGyroTime || now)) / 1000;
-            lastGyroTime = now;
-            gyroActive = true;
-
-            if (!gyroBaseline.set) {
-                gyroBaseline.b = event.beta;
-                gyroBaseline.g = event.gamma;
-                gyroBaseline.set = true;
-            }
-
-            let angle = 0;
-            try { angle = (window.screen && window.screen.orientation) ? window.screen.orientation.angle : (window.orientation || 0); } catch (e) { angle = window.orientation || 0; }
-
-            let b = event.beta - gyroBaseline.b;
-            let g = event.gamma - gyroBaseline.g;
-
-            if (lastBeta !== null && Math.abs(b - lastBeta) > 40) b = lastBeta + (b - lastBeta) * 0.1;
-            if (lastGamma !== null && Math.abs(g - lastGamma) > 40) g = lastGamma + (g - lastGamma) * 0.1;
-            lastBeta = b; lastGamma = g;
-
-            b = Math.max(-90, Math.min(90, b));
-            g = Math.max(-90, Math.min(90, g));
-
-            let rawX = 0, rawY = 0;
-            const TILT_SENSITIVITY = 40.0;
-
-            if (angle === 90) { rawX = b / TILT_SENSITIVITY; rawY = (g + 30.0) / TILT_SENSITIVITY; } 
-            else if (angle === -90 || angle === 270) { rawX = -b / TILT_SENSITIVITY; rawY = -(g - 30.0) / TILT_SENSITIVITY; } 
-            else { rawX = g / TILT_SENSITIVITY; rawY = (b - 30.0) / TILT_SENSITIVITY; }
-
-            const alpha = 0.18;
-            gyroFiltered.x = gyroFiltered.x + (rawX - gyroFiltered.x) * alpha;
-            gyroFiltered.y = gyroFiltered.y + (rawY - gyroFiltered.y) * alpha;
-
-            const maxDelta = 0.15;
-            targetMX += Math.max(-maxDelta, Math.min(maxDelta, gyroFiltered.x - targetMX));
-            targetMY += Math.max(-maxDelta, Math.min(maxDelta, gyroFiltered.y - targetMY));
-
-            const driftRate = 0.002 * dt;
-            gyroBaseline.b += (event.beta - (gyroBaseline.b + 30.0 / TILT_SENSITIVITY)) * driftRate;
-            gyroBaseline.g += (event.gamma - gyroBaseline.g) * driftRate;
-
-            targetMX = Math.max(-2.5, Math.min(2.5, targetMX));
-            targetMY = Math.max(-1.5, Math.min(1.5, targetMY));
-        }
-
-        window.addEventListener('orientationchange', () => { gyroBaseline.set = false; });
-
         function unlockAudio() {
             if (audioInit) return;
             audioInit = true;
-
-            if (isMobile && typeof DeviceOrientationEvent !== 'undefined') {
-                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-                    DeviceOrientationEvent.requestPermission().then(state => {
-                        if (state === 'granted') window.addEventListener('deviceorientation', handleOrientation);
-                    }).catch(err => console.error("Gyroscope error:", err));
-                } else {
-                    window.addEventListener('deviceorientation', handleOrientation);
-                }
-            }
 
             const AudioContext = window.AudioContext || window.webkitAudioContext;
             audioCtx = new AudioContext();
@@ -1346,6 +1250,7 @@ void main() {
         window.onmousemove = (e) => {
             hideInteractionHint();
             if (isMobile) return;
+            lastTouchTime = Date.now();
             mX = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5;
             mY = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
             const cur = document.getElementById('cursor');
@@ -1430,7 +1335,7 @@ void main() {
 
             isW = true;
             document.getElementById('ui-layer').style.opacity = '0';
-            hideInteractionHint(); // Also hide if they just click the button
+            hideInteractionHint(); 
             
             if (!isMobile) {
                 document.getElementById('cursor').style.transform = 'translate(-50%, -50%) scale(2.0)';
@@ -1476,47 +1381,44 @@ void main() {
             animFrameId = requestAnimationFrame(render);
             if (isPaused || !gl) return;
 
+            // ENTERPRISE HARD FPS LOCK (16.6ms yield trap)
             let elapsed = now - lastTime;
-            
-            // STRICT MOBILE 60FPS CAP: Drops frames intelligently on high-refresh (90/120Hz) screens 
-            // Ensures device doesn't overheat. `15.5` provides tiny scheduling headroom.
-            if (isMobile && elapsed < 15.5) return; 
-            
-            // Calculate actual passed time cleanly without float accumulation jitter
-            lastTime = now - (elapsed % 16.666);
+            if (elapsed < frameInterval - 1.0) return; 
+            lastTime = now - (elapsed % frameInterval);
 
             let dtJS = Math.min(now - (lastTimeJS || now), 50);
             lastTimeJS = now; waveTime += (dtJS * 0.001) * engineConfig.energy;
             let dtFactor = Math.min(elapsed, 50) / 16.666;
 
             totalFrames++;
-            let analysisInterval = (totalFrames < 300) ? 15 : 60; 
+            let analysisInterval = (totalFrames < 300) ? 20 : 60; 
 
+            // REAL-TIME TELEMETRY AUTO-SCALING
             if (totalFrames > 30) {
                 if (framesAnalyzed >= analysisInterval) {
-                    let frameHealth = (analysisInterval - droppedFrames) / analysisInterval;
+                    let elapsedAnalysis = now - analysisStartTime;
+                    let actualFPS = (framesAnalyzed / elapsedAnalysis) * 1000;
 
-                    // ZERO-LAG OPTIMIZATION: Only adjust internal uniform shader detail variables.
-                    // We NEVER resize the DOM canvas object mid-render loop anymore to avoid DOM layout stutters.
-                    if (frameHealth < 0.8) globalQuality = Math.max(0.4, globalQuality - 0.1);
-                    else if (frameHealth > 0.95) globalQuality = Math.min(1.0, globalQuality + 0.05);
+                    if (actualFPS < 50 && currentDPR > 0.6) {
+                        currentDPR = Math.max(0.6, currentDPR - 0.2); 
+                        resizeCanvas();
+                    } else if (actualFPS > 58 && currentDPR < baseDPR) {
+                        currentDPR = Math.min(baseDPR, currentDPR + 0.1); 
+                        resizeCanvas();
+                    }
+                    
+                    if (actualFPS < 45) globalQuality = Math.max(0.4, globalQuality - 0.2);
+                    else if (actualFPS > 55) globalQuality = Math.min(1.0, globalQuality + 0.1);
 
-                    framesAnalyzed = 0; droppedFrames = 0;
+                    framesAnalyzed = 0;
+                    analysisStartTime = now;
                 }
-                if (dtJS > 22) droppedFrames++; // 22ms approx 45fps drop zone
                 framesAnalyzed++;
             }
 
             let timeSinceTouch = Date.now() - lastTouchTime;
-            if (gyroActive) {
-                if (isTouching || timeSinceTouch < 150) {
-                    offsetMX = mX - targetMX; offsetMY = mY - targetMY;
-                    if (isTouching) lastTouchTime = Date.now();
-                } else {
-                    if (timeSinceTouch > 2000) { let decay = Math.pow(0.95, dtFactor); offsetMX *= decay; offsetMY *= decay; }
-                    let destX = targetMX + offsetMX; let destY = targetMY + offsetMY;
-                    let lerpAmt = 1.0 - Math.pow(0.93, dtFactor); mX += (destX - mX) * lerpAmt; mY += (destY - mY) * lerpAmt;
-                }
+            if (isTouching) {
+                lastTouchTime = Date.now();
             }
 
             let solarEase = warp * warp * (3.0 - 2.0 * warp);
