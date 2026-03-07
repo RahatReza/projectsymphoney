@@ -1028,9 +1028,11 @@ void main() {
         const CLOUD_SAVE_ENDPOINT = "https://your-api-endpoint.com/v1/config";
         const CLOUD_AUTH_BEARER = "";
 
+        // PRECISION TIME ENGINE: Keeps uniform values from jumping massively when tabs are inactive
         let totalFrames = 0;
         let framesAnalyzed = 0;
         let lastTime = 0;
+        let logicalTime = 0;  // Driven strictly by render loop delta time
         let analysisStartTime = performance.now();
         
         const targetFPS = 60;
@@ -1044,16 +1046,16 @@ void main() {
         
         let gl, prg, isW = false, warp = 0, redirected = false;
         let isTouching = false;
-        let waveTime = 0, lastTimeJS = 0;
-        let detailFade = 1.0; // Drives shader interaction blend
+        let waveTime = 0;
+        let detailFade = 1.0; 
         let TARGET = "https://www.linkedin.com/in/rahatreza100/";
 
         let isPaused = false;
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-        // ENTERPRISE SCALING: Capped at 1.0 DPR minimum to guarantee crisp UI rendering
+        // ENTERPRISE SCALING: Safe start DPR for mobile to guarantee butter-smooth initial dragging
         let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2.0);
-        let currentDPR = baseDPR; 
+        let currentDPR = isMobile ? 1.0 : baseDPR; // Overclock scaler manages stepping up if thermal allows
         let globalQuality = isMobile ? 0.6 : 1.0; 
 
         const configKeys =['energy', 'height', 'stars', 'r', 'g', 'b'];
@@ -1126,6 +1128,7 @@ void main() {
         }
 
         function unlockAudio() {
+            if (isMobile) return; // Completely decouple audio stack on mobile to preserve CPU & unlock smooth scrolling
             if (audioInit) return;
             audioInit = true;
 
@@ -1141,8 +1144,6 @@ void main() {
             } catch (e) { }
 
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            
-            // DEFER: Push heavy audio buffer creation back so UI fade out doesn't stutter!
             audioInitTimer = setTimeout(() => { buildAudioGraph(); }, 800);
         }
 
@@ -1151,6 +1152,7 @@ void main() {
         document.addEventListener('click', unlockAudio, { once: true });
 
         function buildAudioGraph() {
+            if (isMobile) return;
             const bufferSize = Math.floor(audioCtx.sampleRate * 0.8);
             if (audioCtx.createStereoPanner) {
                 try {
@@ -1227,13 +1229,14 @@ void main() {
             }, 300);
         }
 
+        // Optimized hint remover to prevent strict styling layout thrashing during touches
         function hideInteractionHint() {
             const hint = document.getElementById('swipe-hint');
-            if (hint) {
+            if (hint && hint.style.opacity !== '0') {
                 hint.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
                 hint.style.opacity = '0';
                 hint.style.transform = 'translateY(10px)';
-                setTimeout(() => hint.remove(), 800);
+                setTimeout(() => { if (hint.parentNode) hint.remove(); }, 800);
             }
         }
 
@@ -1339,9 +1342,11 @@ void main() {
         function engage() {
             if (isW || !gl || document.getElementById('custom-panel').style.display === 'flex') return;
 
-            if (audioInitTimer) { clearTimeout(audioInitTimer); audioInitTimer = null; }
-            if (!audioInit) unlockAudio();
-            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            if (!isMobile) {
+                if (audioInitTimer) { clearTimeout(audioInitTimer); audioInitTimer = null; }
+                if (!audioInit) unlockAudio();
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            }
 
             isW = true;
             document.getElementById('ui-layer').style.opacity = '0';
@@ -1356,16 +1361,10 @@ void main() {
             if (isMobile) {
                 if ('vibrate' in navigator && typeof navigator.vibrate === 'function') {
                     navigator.vibrate([30, 200, 50, 150, 80, 100, 120, 50, 200, 50, 1000]);
-                } else if (audioCtx && audioCtx.state === 'running') {
-                    let rumble = audioCtx.createOscillator();
-                    let rumbleGain = audioCtx.createGain();
-                    rumble.type = 'sine'; rumble.frequency.setValueAtTime(45, audioCtx.currentTime); rumble.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 1.2);
-                    rumbleGain.gain.setValueAtTime(1.5, audioCtx.currentTime); rumbleGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.2);
-                    rumble.connect(rumbleGain).connect(audioCtx.destination); rumble.start(); rumble.stop(audioCtx.currentTime + 1.2);
                 }
             }
 
-            if (waterGain && audioCtx) {
+            if (!isMobile && waterGain && audioCtx) {
                 let ct = audioCtx.currentTime;
                 waterGain.gain.cancelScheduledValues(ct); waterGain.gain.setValueAtTime(waterGain.gain.value, ct); waterGain.gain.linearRampToValueAtTime(0, ct + 1.5);
                 if (windGain) windGain.gain.linearRampToValueAtTime(0, ct + 1.5);
@@ -1374,7 +1373,7 @@ void main() {
                 if (droneGain) droneGain.gain.linearRampToValueAtTime(0, ct + 2.0);
             }
 
-            if (audioCtx) {
+            if (!isMobile && audioCtx) {
                 const playBell = (freq, delay) => {
                     let osc1 = audioCtx.createOscillator(); let osc2 = audioCtx.createOscillator(); let noteGain = audioCtx.createGain();
                     osc1.type = 'sine'; osc2.type = 'triangle'; osc1.frequency.value = freq; osc2.frequency.value = freq * 1.005;
@@ -1391,13 +1390,20 @@ void main() {
             animFrameId = requestAnimationFrame(render);
             if (isPaused || !gl) return;
 
+            // Ensures `lastTime` starts cleanly instead of throwing massive time gaps
+            if (lastTime === 0) lastTime = now; 
+            
             let elapsed = now - lastTime;
             if (elapsed < 16.0) return; 
+            
+            // LOGICAL TIME ENGINE: Completely averts massive precision loss/jump bugs during browser tab pausing!
+            let dtLogical = Math.min(elapsed, 50); 
             lastTime = now;
 
-            let dtJS = Math.min(now - (lastTimeJS || now), 50);
-            lastTimeJS = now; waveTime += (dtJS * 0.001) * engineConfig.energy;
-            let dtFactor = Math.min(elapsed, 50) / 16.666;
+            logicalTime += dtLogical;
+            waveTime += (dtLogical * 0.001) * engineConfig.energy;
+
+            let dtFactor = dtLogical / 16.666;
             
             // KINETIC SMOOTHING ENGINE: Frame-independent exponential LERP guarantees flawless glide
             let lerpSpeed = 1.0 - Math.pow(0.85, dtFactor);
@@ -1411,7 +1417,7 @@ void main() {
             totalFrames++;
             let analysisInterval = (totalFrames < 300) ? 20 : 60; 
 
-            // REAL-TIME TELEMETRY AUTO-SCALING (Locked out during Touch to prevent drag stutter)
+            // REAL-TIME TELEMETRY AUTO-SCALING
             if (totalFrames > 30) {
                 if (isTouching) {
                     framesAnalyzed = 0; 
@@ -1456,7 +1462,8 @@ void main() {
             if (isW) {
                 warp = Math.min(1.0, warp + (0.008 * dtFactor));
                 if (warp >= 1.0 && !redirected) { redirected = true; window.location.href = TARGET; }
-            } else if (audioInit && audioCtx && audioCtx.state === 'running') {
+            } else if (!isMobile && audioInit && audioCtx && audioCtx.state === 'running') {
+                // Audio parameter updates ONLY run on non-mobile preventing major touch drag stalling!
                 let waveCycle = Math.sin(waveTime * 0.3);
 
                 if (masterPanner && masterPanner.pan) {
@@ -1500,7 +1507,7 @@ void main() {
 
             gl.useProgram(prg);
             gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-            gl.uniform1f(uLocs.time, now * 0.001);
+            gl.uniform1f(uLocs.time, logicalTime * 0.001); // Time strictly constrained to active frames!
             gl.uniform2f(uLocs.mouse, mX, mY);
             gl.uniform1f(uLocs.warp, warp);
             gl.uniform1f(uLocs.wTime, waveTime);
