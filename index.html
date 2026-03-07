@@ -716,7 +716,6 @@ uniform float u_time;
 uniform vec2 u_mouse;
 uniform float u_warp;
 uniform float u_waveTime;
-uniform float u_warmup; 
 
 uniform vec3 u_waterColor;
 uniform float u_waveEnergy;
@@ -724,9 +723,12 @@ uniform float u_waveHeight;
 uniform float u_starDensity;
 uniform float u_quality;
 
+// Performance Telemetry Uniforms
+uniform float u_warmup; 
+uniform float u_detailFade; // Dynamic interaction blend
+
 #define PI 3.14159265359
 
-// Precomputed execution matrices
 const mat2 rotMicro = mat2(0.8, -0.6, 0.6, 0.8);
 const mat2 rotCloud = mat2(1.6, 1.2, -1.2, 1.6);
 
@@ -742,8 +744,8 @@ float GetWaterHeight(vec3 p, bool micro) {
     float t = u_waveTime;
     vec2 uv = p.xz * 0.75;
     
-    // Only calculate scalar noise if strictly needed
-    float nVal = (micro && u_quality > 0.6 && u_warmup < 0.5) ? noise(uv * 0.3 + t * 0.1) : 0.5;
+    // Only calculate scalar noise if strictly needed, fade out if swiping or warming up
+    float nVal = (micro && u_quality > 0.6) ? noise(uv * 0.3 + t * 0.1) * (1.0 - u_warmup) : 0.5;
     
     // Vectorized evaluation mapping 3 standard trigonometric calls into 1 SIMD instruction
     vec3 dots = vec3(
@@ -758,7 +760,6 @@ float GetWaterHeight(vec3 p, bool micro) {
     vec3 amps = vec3(1.5 * (0.85 + 0.3 * nVal), 0.8, 0.4) * u_waveHeight;
     float h = dot(sines, amps);
     
-    // Performance culling fallback conditionally executed
     if (u_quality > 0.8) {
         vec2 dots2 = vec2(
             dot(uv, vec2(-0.8137, -0.5812)) * 3.5 + t * 0.6,
@@ -770,15 +771,15 @@ float GetWaterHeight(vec3 p, bool micro) {
         h += dot(sines2, amps2);
     }
 
+    // INTERACTION SUSPENSION: Smoothly dissolve micro-noise during touch swipe to lock 60FPS
     if(micro && u_quality > 0.6) {
         vec2 uv1 = rotMicro * uv * 8.0;
-        h += (noise(uv1 + t) * 0.5) * (u_waveHeight * 0.18) * u_quality;
+        h += (noise(uv1 + t) * 0.5) * (u_waveHeight * 0.18) * u_quality * u_detailFade * (1.0 - u_warmup);
     }
     
     return h - (u_waveHeight * 0.5);
 }
 
-// OPTIMIZED NORMAL MAP GENERATOR
 vec3 GetNormal(vec3 p, bool micro) {
     vec2 e = vec2(0.02, 0.0);
     float h = GetWaterHeight(p, micro);
@@ -861,17 +862,17 @@ float getClouds(vec3 rd, float t, bool isRef) {
     
     float f = noise(uv);
     
-    // Adaptive thresholding: Guarantees clouds are visible even when quality auto-scales on mobile
     if (!isRef) {
         uv = rotCloud * uv;
         f += 0.5 * noise(uv + t * 0.03);
+        
+        // INTERACTION SUSPENSION: Drop 3rd cloud octave smoothly during swipe to save GPU fillrate
         if (u_quality > 0.7) {
             uv = rotCloud * uv;
-            f += 0.25 * noise(uv - t * 0.02);
+            f += 0.25 * noise(uv - t * 0.02) * u_detailFade;
         }
         f = smoothstep(0.65, 1.5, f);
     } else {
-        // Reflection uses cheaper single-octave clouds to save frames
         f = smoothstep(0.4, 0.95, f);
     }
     
@@ -1032,7 +1033,6 @@ void main() {
         let lastTime = 0;
         let analysisStartTime = performance.now();
         
-        // Exact 60FPS Targeting Engine
         const targetFPS = 60;
         const frameInterval = 1000 / targetFPS;
 
@@ -1045,12 +1045,13 @@ void main() {
         let gl, prg, isW = false, warp = 0, redirected = false;
         let isTouching = false;
         let waveTime = 0, lastTimeJS = 0;
+        let detailFade = 1.0; // Drives shader interaction blend
         let TARGET = "https://www.linkedin.com/in/rahatreza100/";
 
         let isPaused = false;
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-        // ENTERPRISE SCALING: Capped at 1.0 DPR minimum for mobile to guarantee crisp UI rendering
+        // ENTERPRISE SCALING: Capped at 1.0 DPR minimum to guarantee crisp UI rendering
         let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2.0);
         let currentDPR = baseDPR; 
         let globalQuality = isMobile ? 0.6 : 1.0; 
@@ -1140,7 +1141,9 @@ void main() {
             } catch (e) { }
 
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            audioInitTimer = setTimeout(() => { buildAudioGraph(); }, 50);
+            
+            // DEFER: Push heavy audio buffer creation back so UI fade out doesn't stutter!
+            audioInitTimer = setTimeout(() => { buildAudioGraph(); }, 800);
         }
 
         document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
@@ -1322,6 +1325,7 @@ void main() {
             uLocs.sDensity = gl.getUniformLocation(prg, 'u_starDensity');
             uLocs.quality = gl.getUniformLocation(prg, 'u_quality');
             uLocs.warmup = gl.getUniformLocation(prg, 'u_warmup');
+            uLocs.detailFade = gl.getUniformLocation(prg, 'u_detailFade');
 
             resizeCanvas();
             return true;
@@ -1387,7 +1391,6 @@ void main() {
             animFrameId = requestAnimationFrame(render);
             if (isPaused || !gl) return;
 
-            // ENTERPRISE HARD FPS LOCK (16.6ms yield trap) -> Prevents 120Hz runaway thermals
             let elapsed = now - lastTime;
             if (elapsed < 16.0) return; 
             lastTime = now;
@@ -1396,20 +1399,27 @@ void main() {
             lastTimeJS = now; waveTime += (dtJS * 0.001) * engineConfig.energy;
             let dtFactor = Math.min(elapsed, 50) / 16.666;
             
-            // KINETIC SMOOTHING ENGINE: Completely eliminates touch-jitter on high-refresh mobile digitizers
-            mX += (targetMX - mX) * (0.1 * dtFactor);
-            mY += (targetMY - mY) * (0.1 * dtFactor);
+            // KINETIC SMOOTHING ENGINE: Frame-independent exponential LERP guarantees flawless glide
+            let lerpSpeed = 1.0 - Math.pow(0.85, dtFactor);
+            mX += (targetMX - mX) * lerpSpeed;
+            mY += (targetMY - mY) * lerpSpeed;
+
+            // INTERACTION BLEND: Dissolve heavy shader noise while swiping
+            let targetFade = isTouching ? 0.0 : 1.0;
+            detailFade += (targetFade - detailFade) * (0.15 * dtFactor);
 
             totalFrames++;
             let analysisInterval = (totalFrames < 300) ? 20 : 60; 
 
-            // REAL-TIME TELEMETRY AUTO-SCALING
+            // REAL-TIME TELEMETRY AUTO-SCALING (Locked out during Touch to prevent drag stutter)
             if (totalFrames > 30) {
-                if (framesAnalyzed >= analysisInterval) {
+                if (isTouching) {
+                    framesAnalyzed = 0; 
+                    analysisStartTime = now;
+                } else if (framesAnalyzed >= analysisInterval) {
                     let elapsedAnalysis = now - analysisStartTime;
                     let actualFPS = (framesAnalyzed / elapsedAnalysis) * 1000;
 
-                    // Hard minimum DPR of 1.0 enforces UI sharpness under extreme load
                     if (actualFPS < 50 && currentDPR > 1.0) {
                         currentDPR = Math.max(1.0, currentDPR - 0.2); 
                         resizeCanvas();
@@ -1485,6 +1495,9 @@ void main() {
                 }
             }
 
+            // WARMUP: Fade in expensive noise over the first 120 frames to eliminate opening stutter
+            let startupFactor = Math.max(0.0, 1.0 - (totalFrames / 120.0));
+
             gl.useProgram(prg);
             gl.uniform2f(uLocs.res, canvas.width, canvas.height);
             gl.uniform1f(uLocs.time, now * 0.001);
@@ -1496,7 +1509,8 @@ void main() {
             gl.uniform1f(uLocs.wHeight, engineConfig.height);
             gl.uniform1f(uLocs.sDensity, engineConfig.stars);
             gl.uniform1f(uLocs.quality, globalQuality);
-            gl.uniform1f(uLocs.warmup, (totalFrames < 300) ? 1.0 : 0.0);
+            gl.uniform1f(uLocs.warmup, startupFactor);
+            gl.uniform1f(uLocs.detailFade, detailFade);
 
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
