@@ -519,7 +519,7 @@
         </div>
     </div>
 
-    <!-- GLSL SHADER (ENTERPRISE CONTEXTUAL GATING EDITION) -->
+    <!-- GLSL SHADER (TRUE DRS+ EDITION) -->
     <script id="fs" type="x-shader/x-fragment">#version 300 es
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -538,9 +538,10 @@ uniform vec3 u_waterColor;
 uniform float u_waveEnergy;
 uniform float u_waveHeight;
 uniform float u_starDensity;
-uniform float u_quality;
-uniform float u_isMobile; 
 
+// TRUE DRS+ UNIFORMS
+uniform float u_drsTier;     // 0.0 (Potato) to 4.0 (Ultra)
+uniform float u_isMobile; 
 uniform float u_warmup; 
 uniform float u_detailFade; 
 
@@ -560,12 +561,15 @@ float noise(vec2 p) {
     return mix(mix(hash(i), hash(i+vec2(1,0)), u.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
 }
 
-// HYPER-OPTIMIZED VECTORIZED GERSTNER WAVES
+// HYPER-OPTIMIZED DYNAMIC GERSTNER WAVES
 float GetWaterHeight(vec3 p, bool micro) {
+    // TIER 0: Potato Mode. Return flat water immediately. Skips 24+ trig calls.
+    if (u_drsTier < 0.5) return -(u_waveHeight * 0.5);
+
     float t = u_waveTime;
     vec2 uv = p.xz * 0.75;
     
-    float nVal = (micro && u_quality > 0.6) ? noise(uv * 0.3 + t * 0.1) * (1.0 - u_warmup) : 0.5;
+    float nVal = (micro && u_drsTier > 1.5) ? noise(uv * 0.3 + t * 0.1) * (1.0 - u_warmup) : 0.5;
     
     vec3 dots = mod(vec3(
         dot(uv, vec2(0.64018, 0.76822)) * 1.5 + t * 0.8,
@@ -579,7 +583,8 @@ float GetWaterHeight(vec3 p, bool micro) {
     vec3 amps = vec3(1.5 * (0.85 + 0.3 * nVal), 0.8, 0.4) * u_waveHeight;
     float h = dot(sines, amps);
     
-    if (u_quality > 0.8 && u_isMobile < 0.5) {
+    // TIER 3+: Execute secondary wave matrix
+    if (u_drsTier > 2.5) {
         vec2 dots2 = mod(vec2(
             dot(uv, vec2(-0.8137, -0.5812)) * 3.5 + t * 0.6,
             dot(uv, vec2(0.9486, -0.3162)) * 8.0 - t * 2.0
@@ -590,15 +595,20 @@ float GetWaterHeight(vec3 p, bool micro) {
         h += dot(sines2, amps2);
     }
 
-    if(micro && u_quality > 0.6 && u_detailFade > 0.01) {
+    // TIER 2+: Micro noise (dropped smoothly during interaction)
+    if(micro && u_drsTier > 1.5 && u_detailFade > 0.01) {
         vec2 uv1 = rotMicro * uv * 8.0;
-        h += (noise(uv1 + t) * 0.5) * (u_waveHeight * 0.18) * u_quality * u_detailFade * (1.0 - u_warmup);
+        h += (noise(uv1 + t) * 0.5) * (u_waveHeight * 0.18) * u_detailFade * (1.0 - u_warmup);
     }
     
     return h - (u_waveHeight * 0.5);
 }
 
+// ADAPTIVE NORMAL GENERATOR
 vec3 GetNormal(vec3 p, bool micro) {
+    // TIER 0: Potato Mode. Perfect mirror glass.
+    if (u_drsTier < 0.5) return vec3(0.0, 1.0, 0.0);
+
     vec2 e = vec2(0.02, 0.0);
     float h = GetWaterHeight(p, micro);
     float naturalY = 0.04 + (u_waveHeight * 0.4); 
@@ -610,6 +620,8 @@ vec3 GetNormal(vec3 p, bool micro) {
 }
 
 vec3 GetStars(vec3 rd, float nightFactor, bool isRef) {
+    if (u_drsTier < 0.5) return vec3(0.0); // TIER 0: Skip stars
+
     vec3 starRd = isRef ? normalize(vec3(rd.x, abs(rd.y), rd.z)) : rd;
     vec2 starUV = vec2(atan(starRd.x, starRd.z) * 0.5, starRd.y);
     
@@ -623,7 +635,6 @@ vec3 GetStars(vec3 rd, float nightFactor, bool isRef) {
     
     float starSize = 0.02 + hash(gId + vec2(17.3, 89.7)) * 0.1;
     float starShape = smoothstep(starSize, 0.0, length(gUv));
-    
     float stars = starIntensity * starShape * 10.0;
     
     float starPhase = hash(gId + vec2(45.2, 12.8)) * 6.28318;
@@ -640,7 +651,7 @@ vec3 GetStars(vec3 rd, float nightFactor, bool isRef) {
 }
 
 vec3 GetMeteors(vec3 rd, float nightFactor) {
-    if (nightFactor < 0.05 || u_warp > 0.3) return vec3(0.0);
+    if (u_drsTier < 1.5 || nightFactor < 0.05 || u_warp > 0.3) return vec3(0.0); // TIER 0-1: Skip Meteors
     
     vec3 meteorColor = vec3(0.0);
     float seedBase = floor(u_time * 0.15);
@@ -662,7 +673,6 @@ vec3 GetMeteors(vec3 rd, float nightFactor) {
         vec2 sUV = vec2(atan(rd.x, rd.z) * 0.5, rd.y);
         float d = length(sUV - vec2(px, py));
         float g = smoothstep(0.1, 0.0, d);
-        
         float fi2 = smoothstep(0.0, 0.2, progress);
         float fo2 = 1.0 - smoothstep(0.6, 1.0, progress);
         
@@ -673,21 +683,28 @@ vec3 GetMeteors(vec3 rd, float nightFactor) {
 }
 
 float getClouds(vec3 rd, float t, bool isRef) {
+    if (u_drsTier < 1.5) return 0.0; // TIER 0-1: Disable volumetric clouds to rescue framerate
+
     vec2 uv = rd.xz / (rd.y + 0.001) * 0.4;
     uv.x -= t * 0.05;      
     
     float f = noise(uv);
+    
     if (!isRef) {
-        uv = rotCloud * uv;
-        f += 0.5 * noise(uv + t * 0.03);
-        if (u_quality > 0.7 && u_detailFade > 0.01) {
+        if (u_drsTier > 1.5) { // Tier 2+ gets 2nd octave
+            uv = rotCloud * uv;
+            f += 0.5 * noise(uv + t * 0.03);
+        }
+        
+        if (u_drsTier > 3.5 && u_detailFade > 0.01) { // Tier 4 gets 3rd octave
             uv = rotCloud * uv;
             f += 0.25 * noise(uv - t * 0.02) * u_detailFade;
         }
         f = smoothstep(0.65, 1.5, f);
     } else {
-        f = smoothstep(0.4, 0.95, f);
+        f = smoothstep(0.4, 0.95, f); // Reflections always use cheap 1-octave
     }
+    
     return f * smoothstep(0.0, 0.15, rd.y);
 }
 
@@ -743,15 +760,16 @@ void main() {
     float sunDot = max(0.0, dot(rd, sunDir));
     float moonDot = max(0.0, dot(rd, moonDir));
 
-    // PRINCIPLE 3: MATERIAL-LAYER GATING (The Sun Bypass)
-    // If the ray hits the blinding core of the sun/moon, skip all expensive sky/cloud/star logic entirely.
+    // Blinding Core Bypass
     bool skipSky = (sunDot > 0.9998 && sunDir.y > -0.05) || (moonDot > 0.9998 && moonDir.y > -0.05);
 
     if (rd.y >= 0.0 && !skipSky) {
         if(trueNight > 0.05) {
-            vec2 nebUV = rd.xz / (abs(rd.y) + 0.001);
-            float neb = noise(nebUV * 2.0 + u_time * 0.01) * noise(nebUV * 4.0 - u_time * 0.01);
-            col += vec3(0.08, 0.03, 0.12) * neb * trueNight * smoothstep(0.0, 0.3, rd.y) * 0.6 * (1.0 - smoothstep(0.2, 0.8, u_warp));
+            if (u_drsTier > 1.5) { // TIER 2+: Render Nebula
+                vec2 nebUV = rd.xz / (abs(rd.y) + 0.001);
+                float neb = noise(nebUV * 2.0 + u_time * 0.01) * noise(nebUV * 4.0 - u_time * 0.01);
+                col += vec3(0.08, 0.03, 0.12) * neb * trueNight * smoothstep(0.0, 0.3, rd.y) * 0.6 * (1.0 - smoothstep(0.2, 0.8, u_warp));
+            }
             col += GetStars(rd, trueNight, false) * smoothstep(-0.1, 0.2, rd.y);
             col += GetMeteors(rd, trueNight) * smoothstep(-0.1, 0.15, rd.y);
         }
@@ -776,7 +794,7 @@ void main() {
         vec2 moonUV = vec2(dot(rd, moonRight), dot(rd, moonUp)) * 45.0;
         
         float craters = 0.5;
-        if (u_quality > 0.7 && moonDot > 0.998) craters = noise(moonUV * 8.0) * 0.6 + noise(moonUV * 20.0) * 0.4;
+        if (u_drsTier > 1.5 && moonDot > 0.998) craters = noise(moonUV * 8.0) * 0.6 + noise(moonUV * 20.0) * 0.4;
         
         vec3 moonSurface = mix(vec3(0.5, 0.55, 0.6), vec3(1.0, 0.98, 0.95), craters);
         float moonDist = clamp((1.0 - moonDot) / (1.0 - 0.9993), 0.0, 1.0);
@@ -790,14 +808,12 @@ void main() {
     if(rd.y < 0.0) {
         float d = -(ro.y) / min(rd.y, -0.002); 
         
-        // PRINCIPLE 1: DISTANCE-BASED EARLY TERMINATION
-        // If the water ray is physically lost in the horizon fog, bypass all math and just render horizon
+        // Horizon fog cutoff
         if (d > 150.0) {
             col = horizon * 0.5;
         } else {
             vec3 p = ro + rd * d;
             
-            // PRINCIPLE 2: ADAPTIVE DEPTH STEPS
             // Drop normal-map detail for distant waves
             bool doMicro = (d < 50.0);
             
@@ -811,13 +827,15 @@ void main() {
             vec3 refR_Planar = reflect(rd, vec3(0, 1, 0)); 
             vec3 reflectedSky = mix(horizon, zenith, smoothstep(-0.2, 0.6, reflect(rd, N_smooth).y));
             
-            if(trueNight > 0.05 && u_quality > 0.8 && !doMicro) {
+            if(trueNight > 0.05 && !doMicro && u_drsTier > 1.5) {
                 reflectedSky += vec3(0.04, 0.015, 0.06) * noise(refR_Planar.xz * 2.0) * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
                 reflectedSky += GetStars(refR_Planar, trueNight, true);
             }
 
-            float refCloudAlpha = getClouds(refR_Planar, u_time, true);
-            if(refCloudAlpha > 0.0) reflectedSky = mix(reflectedSky, getCloudColor(refR_Planar, sunDir), refCloudAlpha * 0.55);
+            if (u_drsTier > 2.5) { // TIER 3+: Reflected Clouds
+                float refCloudAlpha = getClouds(refR_Planar, u_time, true);
+                if(refCloudAlpha > 0.0) reflectedSky = mix(reflectedSky, getCloudColor(refR_Planar, sunDir), refCloudAlpha * 0.55);
+            }
 
             float fresnel = exp2(5.0 * log2(1.0 - max(0.0, dot(-rd, N_sharp)) + 0.0001));
             float waveLocalH = GetWaterHeight(p, false);
@@ -831,14 +849,15 @@ void main() {
             vec3 waterSunDir = normalize(vec3(sunDir.x, max(sunDir.y, 0.001), sunDir.z));
             vec3 waterMoonDir = normalize(vec3(moonDir.x, max(moonDir.y, 0.001), moonDir.z));
 
+            // Adaptive Specular
+            float specPower = u_drsTier < 1.5 ? 100.0 : (u_isMobile > 0.5 ? 180.0 : 400.0);
+            
             float smoothSpecDot = max(0.0, dot(N_smooth, normalize(-rd + waterSunDir)));
-            float specPower = u_isMobile > 0.5 ? 180.0 : 400.0;
             float specTermSun = exp2(specPower * log2(max(0.0, dot(N_spec, normalize(-rd + waterSunDir))) + 0.0001)) * 4.5 + exp2(80.0 * log2(smoothSpecDot + 0.0001)) * 0.8;
             waterCol += mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.9, 0.7), smoothstep(0.0, 0.3, waterSunDir.y)) * specTermSun * sunMask;
             
             float smoothMoonSpecDot = max(0.0, dot(N_smooth, normalize(-rd + waterMoonDir)));
             float moonSpecIntensity = exp2((specPower + 100.0) * log2(max(0.0, dot(N_spec, normalize(-rd + waterMoonDir))) + 0.0001)) * 2.5 + exp2(80.0 * log2(smoothMoonSpecDot + 0.0001)) * 0.8;
-            
             waterCol += vec3(0.5, 0.65, 0.85) * moonSpecIntensity * trueNight * moonMask;
             
             float diffuseMoon = max(0.0, dot(N_smooth, waterMoonDir));
@@ -848,9 +867,11 @@ void main() {
         }
     }
 
-    float hyperGlow = pow(u_warp, 3.5) * 2.5;
-    float caSplit = u_warp * length(uv) * 1.5;
-    col += vec3(0.85, 0.95, 1.0) * hyperGlow + vec3(caSplit, 0.0, -caSplit) * u_warp * 1.5;
+    if (u_drsTier > 0.5) { // TIER 1+: Enable Post-Process CA/Glow
+        float hyperGlow = pow(u_warp, 3.5) * 2.5;
+        float caSplit = u_warp * length(uv) * 1.5;
+        col += vec3(0.85, 0.95, 1.0) * hyperGlow + vec3(caSplit, 0.0, -caSplit) * u_warp * 1.5;
+    }
 
     col = (col*(2.51*col+0.03))/(col*(2.43*col+0.59)+0.14);
     fragColor = vec4(pow(col, vec3(1.0/2.2)), 1.0);
@@ -859,14 +880,8 @@ void main() {
         const CLOUD_SAVE_ENDPOINT = "https://your-api-endpoint.com/v1/config";
         const CLOUD_AUTH_BEARER = "";
 
-        let totalFrames = 0;
-        let framesAnalyzed = 0;
-        let lastTime = 0;
-        let analysisStartTime = performance.now();
-        
         const canvas = document.getElementById('v');
         
-        // --- Zero-Latency Kinetic Input Engine ---
         let mX = 0, mY = 0.2;
         let targetMX = 0, targetMY = 0.2;
         
@@ -879,11 +894,18 @@ void main() {
         let isPaused = false;
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-        // BUDGET SILICON SCALING: Capped at 0.5 DPR minimum to allow 1080p budget screens to maintain 60FPS
+        // --- TRUE DRS+ STATE MACHINE ---
+        let drsTier = isMobile ? 3 : 4; // Start Mobile at High (3), Desktop at Ultra (4)
+        let drsCooldown = 0;
+        let frameTimes = [];
+        let fpsHistory =[];
+        
         let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.2) : Math.min(window.devicePixelRatio, 2.0);
-        let currentDPR = baseDPR; 
         let minDPR = isMobile ? 0.5 : 1.0;
-        let globalQuality = isMobile ? 0.6 : 1.0; 
+        let currentDPR = drsTier === 4 ? baseDPR : (drsTier === 3 ? Math.max(minDPR, baseDPR * 0.85) : minDPR); 
+        let lastTime = 0;
+        let totalFrames = 0;
+        let globalQuality = 1.0;
 
         const configKeys =['energy', 'height', 'stars', 'r', 'g', 'b'];
         const textKeys =['mainTitle', 'btnText', 'cineTitle', 'cineSub1', 'cineSub2', 'targetUrl'];
@@ -955,7 +977,6 @@ void main() {
         }
 
         function unlockAudio() {
-            // FIX: Purge audio processing on mobile to free 100% CPU thread for visual rendering
             if (isMobile) return; 
 
             if (audioInit) return;
@@ -1068,7 +1089,6 @@ void main() {
             }
         }
 
-        // UPGRADE: Web API Pointer Events for zero-latency 120Hz mapping
         window.addEventListener('pointerdown', (e) => {
             hideInteractionHint();
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
@@ -1076,8 +1096,6 @@ void main() {
             let nx = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5;
             let ny = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
             targetMX = nx; targetMY = ny;
-            
-            // INSTANT SNAP: Nullify the slow initial drag feeling
             mX = nx; mY = ny; 
         }, { passive: true });
 
@@ -1105,6 +1123,15 @@ void main() {
             clearTimeout(resizeTimer); resizeTimer = setTimeout(resizeCanvas, 200);
         });
 
+        function applyDRSTier() {
+            if (drsTier === 4) currentDPR = baseDPR;
+            else if (drsTier === 3) currentDPR = Math.max(minDPR, baseDPR * 0.85);
+            else if (drsTier === 2) currentDPR = Math.max(minDPR, baseDPR * 0.7);
+            else currentDPR = minDPR;
+            
+            resizeCanvas();
+        }
+
         function resizeCanvas() {
             if (!gl) return;
             if (animFrameId) cancelAnimationFrame(animFrameId);
@@ -1116,7 +1143,6 @@ void main() {
             if (prg && uLocs.res) {
                 gl.useProgram(prg);
                 gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-                if (typeof globalQuality !== 'undefined') gl.uniform1f(uLocs.quality, globalQuality);
             }
             if (typeof render === "function" && gl) animFrameId = requestAnimationFrame(render);
         }
@@ -1159,8 +1185,9 @@ void main() {
             uLocs.isMobile = gl.getUniformLocation(prg, 'u_isMobile');
             uLocs.warmup = gl.getUniformLocation(prg, 'u_warmup');
             uLocs.detailFade = gl.getUniformLocation(prg, 'u_detailFade');
+            uLocs.drsTier = gl.getUniformLocation(prg, 'u_drsTier');
 
-            resizeCanvas();
+            applyDRSTier();
             return true;
         }
 
@@ -1219,15 +1246,20 @@ void main() {
         function render(now) {
             animFrameId = requestAnimationFrame(render);
             if (isPaused || !gl) return;
+            totalFrames++;
 
             let elapsed = now - (lastTime || now);
             lastTime = now;
 
             let dtJS = Math.min(elapsed, 50);
+            
+            // PRINCIPLE 6: Optional Animation Tick Throttling
+            // If DRS has collapsed to Tier 0 (Potato), slow down execution time to mask heavy frame drops
+            if (drsTier === 0) dtJS *= 0.5; 
+
             lastTimeJS = now; waveTime += (dtJS * 0.001) * engineConfig.energy;
             let dtFactor = dtJS / 16.666;
             
-            // KINETIC SMOOTHING ENGINE: Snappy, cinematic 1-to-1 tracking for mobile
             let lerpFactor = isMobile ? 0.35 : 0.12; 
             let lerpSpeed = 1.0 - Math.pow(1.0 - lerpFactor, dtFactor);
             mX += (targetMX - mX) * lerpSpeed;
@@ -1236,34 +1268,34 @@ void main() {
             let targetFade = isTouching ? 0.0 : 1.0;
             detailFade += (targetFade - detailFade) * (0.15 * dtFactor);
 
-            totalFrames++;
-            let analysisInterval = (totalFrames < 300) ? 20 : 60; 
-
-            // REAL-TIME TELEMETRY AUTO-SCALING 
-            if (totalFrames > 30) {
-                if (isTouching) {
-                    framesAnalyzed = 0; 
-                    analysisStartTime = now;
-                } else if (framesAnalyzed >= analysisInterval) {
-                    let elapsedAnalysis = now - analysisStartTime;
-                    let actualFPS = (framesAnalyzed / elapsedAnalysis) * 1000;
-
-                    // BUDGET PHONE BREATHER: Allows resolution to hit 0.5 DPR to rescue framerate
-                    if (actualFPS < 45 && currentDPR > minDPR) {
-                        currentDPR = Math.max(minDPR, currentDPR - 0.2); 
-                        resizeCanvas();
-                    } else if (actualFPS > 58 && currentDPR < baseDPR) {
-                        currentDPR = Math.min(baseDPR, currentDPR + 0.1); 
-                        resizeCanvas();
+            // --- TRUE DRS+ SUSTAINED LOAD DETECTION ---
+            frameTimes.push(elapsed);
+            if (frameTimes.length >= 30 && !isTouching) { // Lockout scaler during touch input
+                let sum = 0; for(let i=0; i<30; i++) sum+=frameTimes[i];
+                let avg = sum / 30;
+                let fps = 1000 / avg;
+                frameTimes =[]; 
+                
+                fpsHistory.push(fps);
+                if (fpsHistory.length > 5) fpsHistory.shift(); 
+                
+                if (fpsHistory.length === 5 && drsCooldown <= 0) {
+                    let sustainedFps = fpsHistory.reduce((a,b)=>a+b, 0) / 5;
+                    let oldTier = drsTier;
+                    
+                    if (sustainedFps < 48 && drsTier > 0) {
+                        drsTier--;
+                        drsCooldown = 6; // ~3 second lockout before dropping again
+                    } else if (sustainedFps >= 58 && drsTier < 4) {
+                        drsTier++;
+                        drsCooldown = 8; // Harder to climb back up to prevent ping-ponging
                     }
                     
-                    if (actualFPS < 40) globalQuality = Math.max(0.4, globalQuality - 0.2);
-                    else if (actualFPS > 55) globalQuality = Math.min(1.0, globalQuality + 0.1);
-
-                    framesAnalyzed = 0;
-                    analysisStartTime = now;
+                    if (oldTier !== drsTier) {
+                        applyDRSTier();
+                    }
                 }
-                framesAnalyzed++;
+                if (drsCooldown > 0) drsCooldown--;
             }
 
             let timeSinceTouch = Date.now() - lastTouchTime;
@@ -1324,7 +1356,7 @@ void main() {
                 }
             }
 
-            let startupFactor = Math.max(0.0, 1.0 - (totalFrames / 120.0));
+            let startupFactor = Math.max(0.0, 1.0 - ((totalFrames || 1) / 120.0));
 
             gl.useProgram(prg);
             gl.uniform2f(uLocs.res, canvas.width, canvas.height);
@@ -1340,6 +1372,7 @@ void main() {
             gl.uniform1f(uLocs.isMobile, isMobile ? 1.0 : 0.0);
             gl.uniform1f(uLocs.warmup, startupFactor);
             gl.uniform1f(uLocs.detailFade, detailFade);
+            gl.uniform1f(uLocs.drsTier, drsTier); // Push active Tier to Engine
 
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
