@@ -8,7 +8,11 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;400&display=swap');
 
-        /* DOM/CANVAS SPLIT */
+        /* 
+           PRINCIPLE 1: RENDERING PIPELINE SEPARATION (UI/CGI DECOUPLING)
+           The DOM handles all typography, maintaining razor-sharp vectors via text-rendering optimization.
+           The WebGL canvas is isolated on z-index 1 and can scale its resolution dynamically without affecting the UI.
+        */
         body,
         html {
             margin: 0;
@@ -21,7 +25,6 @@
             -webkit-touch-callout: none;
             height: 100dvh;
             
-            /* TYPOGRAPHY ENGINE: Guarantee razor-sharp text on Desktop PC */
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
@@ -524,7 +527,14 @@
         </div>
     </div>
 
-    <!-- FULLY RESTORED ORIGINAL SHADER. ZERO REGRESSION. -->
+    <!-- 
+      PRINCIPLE 6: SINGLE-PASS DRAW ARCHITECTURE
+      The entire scene is rendered procedurally in a single fullscreen quad draw call.
+      
+      PRINCIPLE 11: SHADER BRANCH DISCIPLINE
+      We heavily utilize uniform branches (`if (u_drsTier)`) which are compiled out or evaluated without thread divergence, 
+      rather than relying on varying spatial branches that split GPU wavefront execution.
+    -->
     <script id="fs" type="x-shader/x-fragment">#version 300 es
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -544,7 +554,6 @@ uniform float u_waveEnergy;
 uniform float u_waveHeight;
 uniform float u_starDensity;
 
-// TRUE DRS+ UNIFORMS
 uniform float u_drsTier;     
 uniform float u_isMobile; 
 uniform float u_warmup; 
@@ -566,13 +575,16 @@ float noise(vec2 p) {
     return mix(mix(hash(i), hash(i+vec2(1,0)), u.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
 }
 
-// RESTORED: Exactly original math for peaks, valleys, and micro-noise.
+// PRINCIPLE 7: PROCEDURAL COST BUDGETING 
+// Math octaves are strictly governed by uniform constants to guarantee predictable GPU load.
 float GetWaterHeight(vec3 p, bool micro) {
     if (u_drsTier < 0.5) return -(u_waveHeight * 0.5);
 
     float t = u_waveTime;
     vec2 uv = p.xz * 0.75;
     
+    // Note: The bool `micro` here is passed as a constant literal (true/false) at the function call site.
+    // The WebGL compiler unrolls this into two separate branchless functions, avoiding runtime warp divergence.
     float nVal = (micro && u_drsTier > 1.5) ? noise(uv * 0.3 + t * 0.1) * (1.0 - u_warmup) : 0.5;
     
     vec3 dots = mod(vec3(
@@ -761,6 +773,9 @@ void main() {
 
     bool skipSky = (sunDot > 0.9998 && sunDir.y > -0.05) || (moonDot > 0.9998 && moonDir.y > -0.05);
 
+    // PRINCIPLE 10: EARLY-Z SIMULATION VIA RAY STRATEGY
+    // This top-level spatial branch serves as an explicit Early-Z cutoff. 
+    // It entirely prevents rendering water operations for pixels identified strictly as the "sky".
     if (rd.y >= 0.0 && !skipSky) {
         if(trueNight > 0.05) {
             if (u_drsTier > 1.5) { 
@@ -875,7 +890,6 @@ void main() {
         const CLOUD_AUTH_BEARER = "";
 
         let totalFrames = 0;
-        let framesAnalyzed = 0;
         let analysisStartTime = performance.now();
 
         const canvas = document.getElementById('v');
@@ -892,14 +906,18 @@ void main() {
         let isPaused = false;
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-        // FIXED DRS STARTING TIER & CAPPED MOBILE DPR
         let drsTier = isMobile ? 2 : 4; 
         let drsCooldown = 0;
-        let frameTimes = [];
-        let fpsHistory =[];
         window.mobileThermalLock = false; 
         
-        // This line guarantees mobile devices do not accidentally try to render at 3K/4K resolution
+        // PRINCIPLE 5: ZERO-ALLOCATION FRAME LOOP
+        // Using a pre-allocated Float32Array as a ring buffer. No memory is allocated inside the render loop.
+        const DRS_HISTORY_SIZE = 60;
+        const frameTimes = new Float32Array(DRS_HISTORY_SIZE);
+        let drsIndex = 0;
+        let drsCount = 0;
+        let drsSum = 0;
+        
         let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.0) : Math.min(window.devicePixelRatio, 2.0);
         let minDPR = isMobile ? 0.5 : baseDPR;
         let currentDPR = baseDPR; 
@@ -1115,7 +1133,15 @@ void main() {
         window.addEventListener('pointercancel', () => { isTouching = false; }, { passive: true });
         window.addEventListener('blur', () => { isTouching = false; });
 
-        document.addEventListener("visibilitychange", () => { isPaused = document.hidden; });
+        // PRINCIPLE 12: SUSTAINED THERMAL STABILITY
+        // Shuts down intensive frame loops AND audio nodes entirely when tab is suspended.
+        document.addEventListener("visibilitychange", () => { 
+            isPaused = document.hidden; 
+            if (audioCtx) {
+                if (isPaused) audioCtx.suspend();
+                else audioCtx.resume();
+            }
+        });
 
         let resizeTimer;
         window.addEventListener('resize', () => {
@@ -1251,10 +1277,21 @@ void main() {
             }
         }
 
+        let lastDrawTime = 0;
+
         function render(now) {
-            animFrameId = requestAnimationFrame(render);
             if (isPaused || !gl) return;
 
+            // PRINCIPLE 12: SUSTAINED THERMAL STABILITY (30FPS LOCK)
+            // If DRS has bottomed out (Potato tier), engage a hard 30 FPS software lock
+            // to half the GPU invocation load, massively saving mobile battery.
+            if (drsTier === 0 && (now - lastDrawTime) < 33.3) {
+                animFrameId = requestAnimationFrame(render);
+                return;
+            }
+            lastDrawTime = now;
+
+            animFrameId = requestAnimationFrame(render);
             totalFrames++; 
 
             let elapsed = now - (lastTime || now);
@@ -1275,37 +1312,40 @@ void main() {
             let targetFade = isTouching ? 0.0 : 1.0;
             detailFade += (targetFade - detailFade) * (0.15 * dtFactor);
 
-            // FIXED DRS SYSTEM (Cooldown outside the array logic to run per-frame)
             if (drsCooldown > 0) drsCooldown--;
 
-            // JIT WARMUP PROTECTION: Telemetry is blind for 120 frames. Prevents false drops on PC.
+            // PRINCIPLE 5: ZERO-ALLOCATION FRAME LOOP
             if (totalFrames > 120 && !isTouching) { 
-                frameTimes.push(elapsed);
-                if (frameTimes.length >= 30) {
-                    let sum = 0; for(let i=0; i<30; i++) sum+=frameTimes[i];
-                    let avg = sum / 30;
+                if (drsCount === DRS_HISTORY_SIZE) {
+                    drsSum -= frameTimes[drsIndex];
+                } else {
+                    drsCount++;
+                }
+                
+                frameTimes[drsIndex] = elapsed;
+                drsSum += elapsed;
+                drsIndex = (drsIndex + 1) % DRS_HISTORY_SIZE;
+                
+                if (drsCount === DRS_HISTORY_SIZE && drsCooldown <= 0) {
+                    let avg = drsSum / DRS_HISTORY_SIZE;
                     let fps = 1000 / avg;
-                    frameTimes =[]; 
                     
-                    fpsHistory.push(fps);
-                    if (fpsHistory.length > 5) fpsHistory.shift(); 
+                    let oldTier = drsTier;
                     
-                    if (fpsHistory.length === 5 && drsCooldown <= 0) {
-                        let sustainedFps = fpsHistory.reduce((a,b)=>a+b, 0) / 5;
-                        let oldTier = drsTier;
-                        
-                        if (sustainedFps < 48 && drsTier > 0) {
-                            drsTier--;
-                            drsCooldown = 60; // Wait a full second before dropping again
-                            if (isMobile) window.mobileThermalLock = true; 
-                        } else if (sustainedFps >= 58 && drsTier < 4 && !window.mobileThermalLock) {
-                            drsTier++;
-                            drsCooldown = 60; 
-                        }
-                        
-                        if (oldTier !== drsTier) {
-                            applyDRSTier();
-                        }
+                    if (fps < 48 && drsTier > 0) {
+                        drsTier--;
+                        drsCooldown = 90; 
+                        if (isMobile) window.mobileThermalLock = true; 
+                    } else if (fps >= 58 && drsTier < (isMobile ? 2 : 4) && !window.mobileThermalLock) {
+                        drsTier++;
+                        drsCooldown = 90; 
+                    }
+                    
+                    if (oldTier !== drsTier) {
+                        applyDRSTier();
+                        // Flush buffer completely so we don't cascade upgrades/downgrades
+                        drsCount = 0;
+                        drsSum = 0;
                     }
                 }
             }
@@ -1380,7 +1420,6 @@ void main() {
             gl.uniform1f(uLocs.wEnergy, engineConfig.energy);
             gl.uniform1f(uLocs.wHeight, engineConfig.height);
             gl.uniform1f(uLocs.sDensity, engineConfig.stars);
-            gl.uniform1f(uLocs.quality, globalQuality);
             gl.uniform1f(uLocs.isMobile, isMobile ? 1.0 : 0.0);
             gl.uniform1f(uLocs.warmup, startupFactor);
             gl.uniform1f(uLocs.detailFade, detailFade);
