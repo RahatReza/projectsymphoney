@@ -861,17 +861,20 @@ float getClouds(vec3 rd, float t, bool isRef) {
     
     float f = noise(uv);
     
-    if (u_quality > 0.6) {
+    // Adaptive thresholding: Guarantees clouds are visible even when quality auto-scales on mobile
+    if (!isRef) {
         uv = rotCloud * uv;
         f += 0.5 * noise(uv + t * 0.03);
+        if (u_quality > 0.7) {
+            uv = rotCloud * uv;
+            f += 0.25 * noise(uv - t * 0.02);
+        }
+        f = smoothstep(0.65, 1.5, f);
+    } else {
+        // Reflection uses cheaper single-octave clouds to save frames
+        f = smoothstep(0.4, 0.95, f);
     }
     
-    if(!isRef && u_quality > 0.9) {
-        uv = rotCloud * uv;
-        f += 0.25 * noise(uv - t * 0.02);
-    }
-    
-    f = smoothstep(0.9, 1.7, f);
     return f * smoothstep(0.0, 0.15, rd.y);
 }
 
@@ -1026,7 +1029,6 @@ void main() {
 
         let totalFrames = 0;
         let framesAnalyzed = 0;
-        let droppedFrames = 0;
         let lastTime = 0;
         let analysisStartTime = performance.now();
         
@@ -1035,16 +1037,21 @@ void main() {
         const frameInterval = 1000 / targetFPS;
 
         const canvas = document.getElementById('v');
-        let gl, prg, isW = false, warp = 0, mX = 0, mY = 0.2, redirected = false;
-        let offsetMX = 0, offsetMY = 0, isTouching = false;
+        
+        // --- Smooth Kinetic Input Engine ---
+        let mX = 0, mY = 0.2;
+        let targetMX = 0, targetMY = 0.2;
+        
+        let gl, prg, isW = false, warp = 0, redirected = false;
+        let isTouching = false;
         let waveTime = 0, lastTimeJS = 0;
         let TARGET = "https://www.linkedin.com/in/rahatreza100/";
 
         let isPaused = false;
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-        // ENTERPRISE SCALING: Capped at 1.0 DPR for mobile to maintain rendering bandwidth
-        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.0) : Math.min(window.devicePixelRatio, 2.0);
+        // ENTERPRISE SCALING: Capped at 1.0 DPR minimum for mobile to guarantee crisp UI rendering
+        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2.0);
         let currentDPR = baseDPR; 
         let globalQuality = isMobile ? 0.6 : 1.0; 
 
@@ -1217,7 +1224,6 @@ void main() {
             }, 300);
         }
 
-        // --- UX ENHANCEMENT: DISMISS HINT ON INTERACTION ---
         function hideInteractionHint() {
             const hint = document.getElementById('swipe-hint');
             if (hint) {
@@ -1232,16 +1238,16 @@ void main() {
             hideInteractionHint();
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
             isTouching = true; lastTouchTime = Date.now();
-            mX = ((e.touches[0].clientX / window.innerWidth) * 2 - 1) * 1.5;
-            mY = ((1 - e.touches[0].clientY / window.innerHeight) * 2 - 1) * 0.7;
+            targetMX = ((e.touches[0].clientX / window.innerWidth) * 2 - 1) * 1.5;
+            targetMY = ((1 - e.touches[0].clientY / window.innerHeight) * 2 - 1) * 0.7;
         }, { passive: true });
 
         window.addEventListener('touchmove', (e) => {
             hideInteractionHint();
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
             isTouching = true; lastTouchTime = Date.now();
-            mX = ((e.touches[0].clientX / window.innerWidth) * 2 - 1) * 1.5;
-            mY = ((1 - e.touches[0].clientY / window.innerHeight) * 2 - 1) * 0.7;
+            targetMX = ((e.touches[0].clientX / window.innerWidth) * 2 - 1) * 1.5;
+            targetMY = ((1 - e.touches[0].clientY / window.innerHeight) * 2 - 1) * 0.7;
         }, { passive: true });
 
         window.addEventListener('touchend', () => { isTouching = false; }, { passive: true });
@@ -1251,8 +1257,8 @@ void main() {
             hideInteractionHint();
             if (isMobile) return;
             lastTouchTime = Date.now();
-            mX = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5;
-            mY = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
+            targetMX = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5;
+            targetMY = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
             const cur = document.getElementById('cursor');
             if (cur) { cur.style.left = e.clientX + 'px'; cur.style.top = e.clientY + 'px'; }
         };
@@ -1381,14 +1387,18 @@ void main() {
             animFrameId = requestAnimationFrame(render);
             if (isPaused || !gl) return;
 
-            // ENTERPRISE HARD FPS LOCK (16.6ms yield trap)
+            // ENTERPRISE HARD FPS LOCK (16.6ms yield trap) -> Prevents 120Hz runaway thermals
             let elapsed = now - lastTime;
-            if (elapsed < frameInterval - 1.0) return; 
-            lastTime = now - (elapsed % frameInterval);
+            if (elapsed < 16.0) return; 
+            lastTime = now;
 
             let dtJS = Math.min(now - (lastTimeJS || now), 50);
             lastTimeJS = now; waveTime += (dtJS * 0.001) * engineConfig.energy;
             let dtFactor = Math.min(elapsed, 50) / 16.666;
+            
+            // KINETIC SMOOTHING ENGINE: Completely eliminates touch-jitter on high-refresh mobile digitizers
+            mX += (targetMX - mX) * (0.1 * dtFactor);
+            mY += (targetMY - mY) * (0.1 * dtFactor);
 
             totalFrames++;
             let analysisInterval = (totalFrames < 300) ? 20 : 60; 
@@ -1399,8 +1409,9 @@ void main() {
                     let elapsedAnalysis = now - analysisStartTime;
                     let actualFPS = (framesAnalyzed / elapsedAnalysis) * 1000;
 
-                    if (actualFPS < 50 && currentDPR > 0.6) {
-                        currentDPR = Math.max(0.6, currentDPR - 0.2); 
+                    // Hard minimum DPR of 1.0 enforces UI sharpness under extreme load
+                    if (actualFPS < 50 && currentDPR > 1.0) {
+                        currentDPR = Math.max(1.0, currentDPR - 0.2); 
                         resizeCanvas();
                     } else if (actualFPS > 58 && currentDPR < baseDPR) {
                         currentDPR = Math.min(baseDPR, currentDPR + 0.1); 
