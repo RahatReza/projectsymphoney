@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
     <meta charset="UTF-8">
@@ -8,7 +8,6 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;400&display=swap');
 
-        /* DOM/CANVAS SPLIT */
         body,
         html {
             margin: 0;
@@ -19,14 +18,6 @@
             cursor: none;
             touch-action: none;
             -webkit-touch-callout: none;
-            height: 100dvh;
-            /* Pillar 6: Dynamic Viewport Height */
-
-            /* SPECTRAL GLOW TOKENS - INTENSIFIED */
-            --glow-1: rgba(180, 215, 255, 0.4);
-            --glow-2: rgba(255, 250, 230, 0.45);
-            --glow-3: rgba(140, 255, 240, 0.25);
-            --glow-active: rgba(255, 255, 255, 0.8);
         }
 
         canvas {
@@ -36,129 +27,6 @@
             position: absolute;
             z-index: 1;
             filter: contrast(1.05);
-        }
-
-        /* IMMERSION GATEWAY */
-        #intro-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 50;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(20px);
-            transition: opacity 1.5s ease, backdrop-filter 1.5s ease;
-            cursor: pointer;
-        }
-
-        .intro-visual {
-            width: 80px;
-            height: 80px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            position: relative;
-            animation: visual-pulse 2s ease-in-out infinite;
-            margin-bottom: 40px;
-        }
-
-        .intro-visual::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
-            animation: sound-wave 1.5s ease-out infinite;
-        }
-
-        .intro-visual::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            animation: sound-wave-outer 1.5s ease-out infinite;
-            animation-delay: 0.3s;
-        }
-
-        @keyframes visual-pulse {
-            0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
-            }
-            50% {
-                transform: scale(1.05);
-                box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
-            }
-        }
-
-        @keyframes sound-wave {
-            0% {
-                transform: translate(-50%, -50%) scale(0.5);
-                opacity: 1;
-            }
-            100% {
-                transform: translate(-50%, -50%) scale(2);
-                opacity: 0;
-            }
-        }
-
-        @keyframes sound-wave-outer {
-            0% {
-                transform: translate(-50%, -50%) scale(0.5);
-                opacity: 0.8;
-            }
-            100% {
-                transform: translate(-50%, -50%) scale(2.5);
-                opacity: 0;
-            }
-        }
-
-        .intro-text {
-            color: #fff;
-            font-size: 0.7rem;
-            letter-spacing: 15px;
-            text-transform: uppercase;
-            animation: pulse-breath 2.5s infinite alternate ease-in-out;
-            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
-            pointer-events: none;
-            margin-bottom: 15px;
-        }
-
-        .intro-hint {
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 0.55rem;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            animation: hint-fade 3s ease-in-out infinite;
-        }
-
-        @keyframes pulse-breath {
-            0% {
-                opacity: 0.3;
-                letter-spacing: 15px;
-            }
-            100% {
-                opacity: 1;
-                letter-spacing: 20px;
-            }
-        }
-
-        @keyframes hint-fade {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 0.8; }
         }
 
         /* STANDARD UI */
@@ -172,98 +40,36 @@
             justify-content: center;
             align-items: center;
             pointer-events: none;
-            transition: opacity 1.2s ease;
+            transition: opacity 0.6s ease;
         }
 
         .brand-text {
             text-align: center;
         }
 
-        /* --- RAHATIL TITLE: NATURAL SHIFTING FLOW --- */
+        /* Adjusted shadow for perfect daylight readability */
         h1 {
             font-weight: 100;
             letter-spacing: 35px;
-            color: rgba(255, 252, 248, 0.95);
+            color: #fff;
             margin: 0;
             font-size: 3.2rem;
             text-transform: uppercase;
-            
-            background: linear-gradient(
-                110deg,
-                rgba(255, 252, 248, 0.7) 0%,
-                rgba(160, 235, 255, 0.95) 25%,
-                rgba(255, 255, 255, 1) 50%,
-                rgba(180, 255, 240, 0.95) 75%,
-                rgba(255, 252, 248, 0.7) 100%
-            );
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-
-            text-shadow: 0 8px 40px rgba(0, 0, 5, 0.6), 0 0 30px var(--glow-1);
-            animation: spectral-flow 6s linear infinite;
-            will-change: background-position, text-shadow;
+            text-shadow: 0 4px 30px rgba(0, 0, 0, 0.35), 0 0 15px rgba(255, 255, 255, 0.2);
         }
 
-        @keyframes spectral-flow {
-            0% {
-                background-position: 200% center;
-                text-shadow: 0 8px 40px rgba(0, 0, 5, 0.6), 0 0 25px var(--glow-1);
-            }
-            50% {
-                text-shadow: 0 8px 50px rgba(0, 0, 10, 0.7), 0 0 45px var(--glow-2), 0 0 25px var(--glow-3);
-            }
-            100% {
-                background-position: 0% center;
-                text-shadow: 0 8px 40px rgba(0, 0, 5, 0.6), 0 0 25px var(--glow-1);
-            }
-        }
-
-        /* --- INITIALIZE BUTTON: TIDAL GLOW FLOW --- */
         .btn-init {
             margin-top: 80px;
             pointer-events: auto;
             cursor: pointer;
-            color: rgba(255, 252, 248, 0.9);
+            color: #fff;
             font-size: 0.7rem;
             letter-spacing: 15px;
             text-transform: uppercase;
-            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.5;
+            transition: 0.4s;
             position: relative;
-            
-            background: linear-gradient(
-                90deg,
-                rgba(255, 252, 248, 0.5) 0%,
-                rgba(140, 255, 240, 0.95) 30%,
-                rgba(255, 255, 255, 1) 50%,
-                rgba(180, 215, 255, 0.95) 70%,
-                rgba(255, 252, 248, 0.5) 100%
-            );
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-
-            text-shadow: 0 4px 15px rgba(0, 0, 8, 0.6), 0 0 15px var(--glow-3);
-            animation: btn-glow-flow 4s linear infinite;
-        }
-
-        @keyframes btn-glow-flow {
-            0% {
-                background-position: 200% center;
-                opacity: 0.6;
-                text-shadow: 0 4px 15px rgba(0, 0, 8, 0.6), 0 0 10px var(--glow-3);
-            }
-            50% {
-                opacity: 0.95;
-                text-shadow: 0 4px 25px rgba(0, 0, 10, 0.7), 0 0 20px var(--glow-1), 0 0 10px var(--glow-2);
-            }
-            100% {
-                background-position: 0% center;
-                opacity: 0.6;
-                text-shadow: 0 4px 15px rgba(0, 0, 8, 0.6), 0 0 10px var(--glow-3);
-            }
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
         }
 
         .btn-init::after {
@@ -281,66 +87,12 @@
         .btn-init:hover {
             opacity: 1;
             letter-spacing: 20px;
-            -webkit-text-fill-color: #fff;
-            text-shadow: 0 0 40px var(--glow-active), 0 4px 20px rgba(0, 0, 0, 0.9);
-            animation: none;
         }
 
         .btn-init:hover::after {
             width: 100%;
             left: 0;
             opacity: 1;
-        }
-
-        /* --- INTERACTION HINT (DISCOVERABILITY UX) --- */
-        #swipe-hint {
-            position: absolute;
-            bottom: 12%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            opacity: 0;
-            pointer-events: none;
-            animation: hint-appear 2s ease forwards 2.5s;
-        }
-
-        .swipe-track {
-            width: 60px;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            margin-bottom: 10px;
-            position: relative;
-        }
-
-        .swipe-dot {
-            position: absolute;
-            top: -1px;
-            left: 0;
-            width: 15px;
-            height: 3px;
-            border-radius: 2px;
-            background: rgba(160, 235, 255, 0.95);
-            box-shadow: 0 0 10px rgba(160, 235, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.5);
-            animation: swipe-dot-move 2.5s ease-in-out infinite;
-        }
-
-        .swipe-text {
-            color: rgba(255, 252, 248, 0.45);
-            font-size: 0.55rem;
-            letter-spacing: 6px;
-            text-transform: uppercase;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
-        }
-
-        @keyframes swipe-dot-move {
-            0% { left: 0%; opacity: 0; transform: translateX(-50%); }
-            20% { opacity: 1; }
-            80% { opacity: 1; }
-            100% { left: 100%; opacity: 0; transform: translateX(-50%); }
-        }
-
-        @keyframes hint-appear {
-            to { opacity: 1; }
         }
 
         #cinematic-layer {
@@ -363,10 +115,10 @@
         .cine-title {
             font-weight: 100;
             font-size: 2.2rem;
-            color: rgba(255, 252, 248, 0.95);
+            color: #fff;
             letter-spacing: 15px;
             text-transform: uppercase;
-            text-shadow: 0 8px 35px rgba(0, 0, 10, 0.45), 0 0 30px rgba(220, 235, 255, 0.15);
+            text-shadow: 0 4px 25px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.2);
             opacity: 0;
             transform: translateY(20px);
             transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -375,14 +127,14 @@
 
         .cine-sub {
             font-size: 0.65rem;
-            color: rgba(220, 225, 235, 0.85);
+            color: #ddd;
             letter-spacing: 12px;
             text-transform: uppercase;
             opacity: 0;
             transform: translateY(15px);
             transition: all 0.6s ease;
             text-align: center;
-            text-shadow: 0 4px 15px rgba(0, 0, 5, 0.6);
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         }
 
         #cinematic-layer.active {
@@ -405,7 +157,7 @@
         #cinematic-layer.active .cine-sub:nth-child(3) {
             opacity: 1;
             transform: translateY(0);
-            color: rgba(255, 252, 248, 0.95);
+            color: #fff;
             transition-delay: 0.8s;
         }
 
@@ -450,11 +202,11 @@
             letter-spacing: 5px;
             padding: 10px;
             width: 300px;
+            text-transform: uppercase;
         }
 
         #auth-input::placeholder {
             color: rgba(255, 255, 255, 0.3);
-            text-transform: uppercase;
         }
 
         .panel-box {
@@ -464,8 +216,6 @@
             padding: 30px;
             width: 400px;
             max-width: 90%;
-            max-height: 85vh;
-            overflow-y: auto;
             color: #fff;
             font-family: 'Inter', sans-serif;
             box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
@@ -475,13 +225,8 @@
             box-sizing: border-box;
         }
 
-        .panel-box::-webkit-scrollbar { width: 6px; }
-        .panel-box::-webkit-scrollbar-track { background: transparent; }
-        .panel-box::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
-        .panel-box::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
-
         .panel-box h3 {
-            margin: 0 0 5px 0;
+            margin: 0 0 10px 0;
             font-weight: 100;
             letter-spacing: 8px;
             text-transform: uppercase;
@@ -535,26 +280,6 @@
             border-radius: 1px;
         }
 
-        .text-input {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: #fff;
-            font-family: 'Inter', sans-serif;
-            font-size: 0.75rem;
-            padding: 8px;
-            width: 100%;
-            border-radius: 4px;
-            box-sizing: border-box;
-            outline: none;
-            transition: 0.3s;
-            margin-top: 4px;
-        }
-
-        .text-input:focus {
-            border-color: rgba(255, 255, 255, 0.7);
-            background: rgba(0, 0, 0, 0.6);
-        }
-
         .panel-buttons {
             display: flex;
             gap: 10px;
@@ -575,31 +300,61 @@
             transition: 0.3s;
         }
 
-        .btn-panel:hover { background: rgba(255, 255, 255, 0.2); }
-        .btn-reset { color: #ffa0a0; border-color: rgba(255, 100, 100, 0.3); }
-        .btn-reset:hover { background: rgba(255, 100, 100, 0.15); border-color: rgba(255, 100, 100, 0.6); }
-        .btn-deploy { background: rgba(74, 222, 128, 0.15); border-color: rgba(74, 222, 128, 0.4); color: #4ade80; }
-        .btn-deploy:hover { background: rgba(74, 222, 128, 0.25); border-color: rgba(74, 222, 128, 0.7); }
-
-        select.text-input { cursor: pointer; }
-
-        @media (max-width: 768px) {
-            h1 { font-size: 2.2rem; letter-spacing: 18px; margin-left: 18px; }
-            .btn-init { font-size: 0.6rem; letter-spacing: 10px; margin-top: 50px; }
-            .btn-init:hover { letter-spacing: 12px; }
-            .cine-title { font-size: 1.5rem; letter-spacing: 8px; }
-            .cine-sub { font-size: 0.5rem; letter-spacing: 6px; }
-            #cinematic-layer.active .cine-title { letter-spacing: 15px; }
-            .panel-box { padding: 20px; gap: 12px; }
-            .panel-box h3 { font-size: 1rem; letter-spacing: 5px; }
+        .btn-panel:hover {
+            background: rgba(255, 255, 255, 0.2);
         }
 
-        @media (max-height: 500px) and (orientation: landscape) {
-            h1 { font-size: 1.8rem; letter-spacing: 12px; }
-            .btn-init { margin-top: 30px; font-size: 0.55rem; letter-spacing: 8px; }
-            .panel-box { padding: 15px; gap: 8px; }
-            .slider-group label { font-size: 0.6rem; }
-            #swipe-hint { bottom: 5%; }
+        .btn-reset {
+            color: #ffa0a0;
+            border-color: rgba(255, 100, 100, 0.3);
+        }
+
+        .btn-reset:hover {
+            background: rgba(255, 100, 100, 0.15);
+            border-color: rgba(255, 100, 100, 0.6);
+        }
+
+        /* MOBILE RESPONSIVE SCALING */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+                letter-spacing: 18px;
+                margin-left: 18px;
+            }
+
+            .btn-init {
+                font-size: 0.6rem;
+                letter-spacing: 10px;
+                margin-top: 50px;
+            }
+
+            .btn-init:hover {
+                letter-spacing: 12px;
+            }
+
+            .cine-title {
+                font-size: 1.5rem;
+                letter-spacing: 8px;
+            }
+
+            .cine-sub {
+                font-size: 0.5rem;
+                letter-spacing: 6px;
+            }
+
+            #cinematic-layer.active .cine-title {
+                letter-spacing: 15px;
+            }
+
+            .panel-box {
+                padding: 20px;
+                gap: 12px;
+            }
+
+            .panel-box h3 {
+                font-size: 1rem;
+                letter-spacing: 5px;
+            }
         }
     </style>
 </head>
@@ -608,34 +363,25 @@
     <div id="cursor"></div>
     <canvas id="v"></canvas>
 
-    <div id="intro-layer" onclick="window.enterExperience()">
-        <div class="intro-visual"></div>
-        <div class="intro-text">Click to Begin</div>
-        <div class="intro-hint">Enable Audio Experience</div>
-    </div>
-
     <div id="ui-layer">
         <div class="brand-text">
-            <h1 id="ui-mainTitle">RAHATIL</h1>
-            <div class="btn-init" id="ui-btnText" onclick="engage()">Initialize</div>
-        </div>
-        
-        <div id="swipe-hint">
-            <div class="swipe-track"><div class="swipe-dot"></div></div>
-            <div class="swipe-text">Swipe to explore</div>
+            <h1>RAHATIL</h1>
+            <div class="btn-init" onclick="engage()">Initialize</div>
         </div>
     </div>
 
     <div id="cinematic-layer">
-        <div class="cine-title" id="ui-cineTitle">Welcome, Rahatil</div>
-        <div class="cine-sub" id="ui-cineSub1">Calibrating Tidal Engine...</div>
-        <div class="cine-sub" id="ui-cineSub2">Redirecting to Terminal</div>
+        <div class="cine-title">Welcome, Rahatil</div>
+        <div class="cine-sub">Calibrating Tidal Engine...</div>
+        <div class="cine-sub">Redirecting to Terminal</div>
     </div>
 
+    <!-- ADMIN AUTHORIZATION MODAL -->
     <div id="auth-modal" class="overlay-layer">
         <input type="password" id="auth-input" placeholder="OVERRIDE CODE" autocomplete="off" />
     </div>
 
+    <!-- ENGINEERING PANEL -->
     <div id="custom-panel" class="overlay-layer">
         <div class="panel-box">
             <h3>Engine Override</h3>
@@ -646,7 +392,7 @@
             </div>
             <div class="slider-group">
                 <label>Wave Height <span id="val-height">0.05</span></label>
-                <input type="range" id="inp-height" min="0" max="0.5" step="0.01" value="0.05">
+                <input type="range" id="inp-height" min="0" max="0.2" step="0.01" value="0.05">
             </div>
             <div class="slider-group">
                 <label>Star Density (Lower = More) <span id="val-stars">600</span></label>
@@ -665,45 +411,16 @@
                 <input type="range" id="inp-b" min="0" max="1" step="0.01" value="0.08">
             </div>
 
-            <h3 style="margin-top: 15px; font-size: 1rem;">System Text & Links</h3>
-
-            <div class="slider-group">
-                <label>Main Title</label>
-                <input type="text" id="inp-mainTitle" class="text-input">
-            </div>
-            <div class="slider-group">
-                <label>Button Action</label>
-                <input type="text" id="inp-btnText" class="text-input">
-            </div>
-            <div class="slider-group">
-                <label>Cinematic Title</label>
-                <input type="text" id="inp-cineTitle" class="text-input">
-            </div>
-            <div class="slider-group">
-                <label>Subtext 1</label>
-                <input type="text" id="inp-cineSub1" class="text-input">
-            </div>
-            <div class="slider-group">
-                <label>Subtext 2</label>
-                <input type="text" id="inp-cineSub2" class="text-input">
-            </div>
-            <div class="slider-group">
-                <label>Redirect URL</label>
-                <input type="text" id="inp-targetUrl" class="text-input">
-            </div>
-
             <div class="panel-buttons">
-                <button class="btn-panel btn-reset" onclick="resetAdminPanel()">Reset</button>
-                <button class="btn-panel btn-deploy" onclick="showDeployPanel()">☁️ Deploy</button>
-            </div>
-            <div class="panel-buttons">
+                <button class="btn-panel btn-reset" onclick="resetAdminPanel()">Reset Default</button>
                 <button class="btn-panel" onclick="closeAdminPanel()">Sync & Close</button>
             </div>
         </div>
     </div>
 
-    <!-- GLSL SHADER (12 PILLARS OPTIMIZED EDITION) -->
     <script id="fs" type="x-shader/x-fragment">#version 300 es
+
+// SAFARI PRECISION HANDLING
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
@@ -714,22 +431,15 @@ out vec4 fragColor;
 uniform vec2 u_res;
 uniform float u_time;
 uniform vec2 u_mouse;
-uniform float u_warp;
-uniform float u_waveTime;
+uniform float u_warp; 
 
+// CUSTOMIZATION UNIFORMS
 uniform vec3 u_waterColor;
 uniform float u_waveEnergy;
 uniform float u_waveHeight;
 uniform float u_starDensity;
-uniform float u_quality;
-
-uniform float u_warmup; 
-uniform float u_detailFade; 
 
 #define PI 3.14159265359
-
-const mat2 rotMicro = mat2(0.8, -0.6, 0.6, 0.8);
-const mat2 rotCloud = mat2(1.6, 1.2, -1.2, 1.6);
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 float noise(vec2 p) {
@@ -738,157 +448,102 @@ float noise(vec2 p) {
     return mix(mix(hash(i), hash(i+vec2(1,0)), u.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
 }
 
-// HYPER-OPTIMIZED VECTORIZED GERSTNER WAVES
-float GetWaterHeight(vec3 p, bool micro) {
-    float t = u_waveTime;
-    vec2 uv = p.xz * 0.75;
+// MULTI-OCTAVE GERSTNER WAVE FORMULA WITH DISPLACEMENT
+// CTO PHILOSOPHY 2: Reflection LOD - Skip 60% of math when rendering reflections!
+float GetWaterHeight(vec3 p, bool micro, bool isRef) {
+    float t = u_time * u_waveEnergy; 
+    float h = 0.0;
+    vec2 uv = p.xz;
     
-    // Smooth interaction suspension drops heavy noise safely on mobile drag
-    float detailMix = u_detailFade * (1.0 - u_warmup);
-    float nVal = (micro && u_quality > 0.4) ? noise(uv * 0.3 + t * 0.1) * detailMix : 0.5;
+    // Base wave always rendered
+    vec2 d1 = normalize(vec2(1.0, 1.2));
+    h += u_waveHeight * pow(sin(dot(uv, d1) * 2.0 + t) * 0.5 + 0.5, 2.0);
     
-    vec3 dots = vec3(
-        dot(uv, vec2(0.64018, 0.76822)) * 1.5 + t * 0.8,
-        dot(uv, vec2(-0.78086, 0.62469)) * 2.8 - t * 1.2,
-        dot(uv, vec2(0.19611, -0.98058)) * 5.0 + t * 1.5
-    );
-    
-    vec3 sines = sin(dots) * 0.5 + 0.5;
-    sines *= sines; 
-    
-    vec3 amps = vec3(1.5 * (0.85 + 0.3 * nVal), 0.8, 0.4) * u_waveHeight;
-    float h = dot(sines, amps);
-    
-    if (u_quality > 0.6) {
-        vec2 dots2 = vec2(
-            dot(uv, vec2(-0.8137, -0.5812)) * 3.5 + t * 0.6,
-            dot(uv, vec2(0.9486, -0.3162)) * 8.0 - t * 2.0
-        );
-        vec2 sines2 = sin(dots2) * 0.5 + 0.5;
-        sines2 *= sines2;
-        vec2 amps2 = vec2(0.25 * (0.8 + 0.4 * nVal), 0.15) * u_waveHeight;
-        h += dot(sines2, amps2);
+    // SKIP HEAVY LAYERS IF THIS IS JUST A REFLECTION!
+    if (!isRef) {
+        vec2 d2 = normalize(vec2(-1.0, 0.8));
+        h += (u_waveHeight * 0.6) * pow(sin(dot(uv, d2) * 3.5 - t * 1.3) * 0.5 + 0.5, 2.5);
+        
+        vec2 d3 = normalize(vec2(0.3, -1.5));
+        h += (u_waveHeight * 0.3) * pow(sin(dot(uv, d3) * 6.0 + t * 1.8) * 0.5 + 0.5, 3.0);
+
+        if(micro) h += noise(uv * 12.0 + t) * (u_waveHeight * 0.2);
+        
+        // 3D MOUSE WAKE / LIQUID RIPPLES
+        vec2 m_uv = u_mouse * vec2(u_res.x / u_res.y, 1.0) * 0.5;
+        vec3 m_rd = normalize(vec3(m_uv.x, m_uv.y - 0.1, 1.1 + u_warp * 0.6));
+        
+        if(m_rd.y < -0.05) {
+            // FIX for "Plain Tidals": Removed dynamic time from mouse origin coordinates to save float precision!
+            vec3 ro_m = vec3(0.0, 1.5, u_warp * 35.0); 
+            float safeY = clamp(m_rd.y, -0.85, -0.15); 
+            vec3 m_p = ro_m - m_rd * (1.5 / safeY); 
+            
+            float dist = length(p.xz - m_p.xz);
+            float wake = smoothstep(3.5, 0.0, dist) * cos(dist * 7.0 - u_time * 12.0) * 0.06;
+            h += wake * (1.0 - smoothstep(0.0, 0.5, u_warp)); 
+        }
     }
 
-    if(micro && u_quality > 0.6) {
-        vec2 uv1 = rotMicro * uv * 8.0;
-        h += (noise(uv1 + t) * 0.5) * (u_waveHeight * 0.18) * u_quality * detailMix;
-    }
-    
-    return h - (u_waveHeight * 0.5);
+    return h - (u_waveHeight * 0.5); 
 }
 
-// Pillar 2: Depth-Aware LOD inside Normal calculations
-vec3 GetNormal(vec3 p, bool micro) {
-    float dist = length(p.xz);
-    // Expand sample stride slightly at distance to prevent aliasing and drop cost
-    vec2 e = vec2(mix(0.02, 0.15, smoothstep(50.0, 150.0, dist)), 0.0);
-    
-    float h = GetWaterHeight(p, micro);
-    float naturalY = 0.04 + (u_waveHeight * 0.4); 
+vec3 GetNormal(vec3 p, bool micro, bool isRef) {
+    vec2 e = vec2(0.02, 0.0); 
+    float h = GetWaterHeight(p, micro, isRef);
     return normalize(vec3(
-        h - GetWaterHeight(p - e.xyy, false), 
-        naturalY, 
-        h - GetWaterHeight(p - e.yyx, false)
+        h - GetWaterHeight(p - e.xyy, micro, isRef), 
+        0.05, 
+        h - GetWaterHeight(p - e.yxy, micro, isRef)
     ));
 }
 
-vec3 GetStars(vec3 rd, float nightFactor, bool isRef) {
+// DYNAMIC PLANAR STAR ENGINE
+float GetStars(vec3 rd, float nightFactor, bool isRef) {
     vec3 starRd = isRef ? normalize(vec3(rd.x, abs(rd.y), rd.z)) : rd;
-    vec2 starUV = vec2(atan(starRd.x, starRd.z) * 0.5, starRd.y);
+    vec2 starUV = starRd.xz / (abs(starRd.y) + 0.001);
     
-    float gridRes = 350.0;
-    vec2 gId = floor(starUV * gridRes);
-    vec2 gUv = fract(starUV * gridRes) - 0.5;
-
-    float baseHash = hash(gId);
-    float densityFactor = isRef ? u_starDensity * 1.33 : u_starDensity;
-    float starIntensity = exp2(densityFactor * 0.15 * log2(baseHash + 0.0001));
+    float baseHash = hash(starUV);
+    float stars = pow(baseHash, isRef ? u_starDensity * 1.33 : u_starDensity);
     
-    float starSize = 0.02 + hash(gId + vec2(17.3, 89.7)) * 0.1;
-    float starShape = smoothstep(starSize, 0.0, length(gUv));
-    
-    float stars = starIntensity * starShape * 10.0;
-    
-    float starPhase = hash(gId + vec2(45.2, 12.8)) * 6.28318;
-    float starFreq = 0.6 + hash(gId + vec2(9.3, 74.1)) * 2.0;
-    float twinkle = 0.55 + 0.45 * sin(u_time * starFreq + starPhase);
-    
-    float colorSeed = hash(gId + vec2(137.2, 43.8));
-    vec3 starColor = mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.95, 0.8), colorSeed);
-    starColor = mix(starColor, vec3(1.0, 0.8, 0.6), colorSeed * colorSeed * 0.25);
+    float starPhase = hash(starUV + vec2(45.2, 12.8)) * PI * 2.0; 
+    float starFreq = hash(starUV + vec2(9.3, 74.1)) * 2.5 + 0.5; 
+    float twinkle = 0.5 + 0.5 * sin(u_time * starFreq + starPhase);
     
     float warpFade = 1.0 - smoothstep(0.1, 0.7, u_warp);
-    float refMult = isRef ? 0.25 : 1.0;
-    return stars * twinkle * nightFactor * refMult * warpFade * starColor;
+    return stars * twinkle * nightFactor * (isRef ? 0.3 : 1.2) * warpFade;
 }
 
-vec3 GetMeteors(vec3 rd, float nightFactor) {
-    if (nightFactor < 0.05 || u_warp > 0.3) return vec3(0.0);
-    
-    vec3 meteorColor = vec3(0.0);
-    float seedBase = floor(u_time * 0.15);
-    
-    for (int i = 0; i < 2; i++) {
-        float fi = float(i);
-        float seed = hash(vec2(seedBase + fi * 17.0, fi * 31.0));
-        
-        if (seed < 0.72) continue;
-        
-        float progress = fract(u_time * 0.1 + seed * 7.0);
-        if (progress < 0.08 || progress > 0.85) continue;
-        
-        float sx = -2.0 + seed * 4.0;
-        float ang = -0.3 - seed * 0.4;
-        
-        float px = sx + progress * 3.0 * cos(ang);
-        float py = 0.5 + progress * 1.8 * sin(ang);
-        
-        vec2 sUV = vec2(atan(rd.x, rd.z) * 0.5, rd.y);
-        float d = length(sUV - vec2(px, py));
-        float g = smoothstep(0.1, 0.0, d);
-        
-        float fi2 = smoothstep(0.0, 0.2, progress);
-        float fo2 = 1.0 - smoothstep(0.6, 1.0, progress);
-        
-        vec3 c = mix(vec3(0.7, 0.8, 1.0), vec3(1.0, 0.9, 0.7), seed);
-        meteorColor += c * g * fi2 * fo2 * nightFactor * 1.2;
-    }
-    
-    return meteorColor;
-}
-
+// --- OPTIMIZED CLOUD ENGINE (Dynamic LOD for Reflections) ---
 float getClouds(vec3 rd, float t, bool isRef) {
+    if(rd.y < 0.0) return 0.0;
     vec2 uv = rd.xz / (rd.y + 0.001) * 0.4;
-    uv.x -= t * 0.05;      
+    uv.x -= t * 0.05; 
     
     float f = noise(uv);
+    uv = mat2(1.6, 1.2, -1.2, 1.6) * uv;
+    f += 0.5 * noise(uv + t * 0.03);
     
-    if (!isRef) {
-        uv = rotCloud * uv;
-        f += 0.5 * noise(uv + t * 0.03);
-        if (u_quality > 0.7) {
-            uv = rotCloud * uv;
-            f += 0.25 * noise(uv - t * 0.02) * u_detailFade;
-        }
-        f = smoothstep(0.65, 1.5, f);
-    } else {
-        f = smoothstep(0.4, 0.95, f);
+    // CTO Philosophy 2: Skip 3rd octave math for water reflections!
+    if(!isRef) {
+        uv = mat2(1.6, 1.2, -1.2, 1.6) * uv;
+        f += 0.25 * noise(uv - t * 0.02);
     }
     
-    return f * smoothstep(0.0, 0.15, rd.y);
+    f = smoothstep(0.9, 1.7, f);
+    return f * smoothstep(0.0, 0.15, rd.y); 
 }
 
 vec3 getCloudColor(vec3 rd, vec3 sunDir) {
     vec3 cloudDay = vec3(0.95, 0.98, 1.0);
     vec3 cloudSunset = vec3(1.0, 0.4, 0.15);
-    vec3 cloudNight = vec3(0.01, 0.015, 0.03);      
+    vec3 cloudNight = vec3(0.01, 0.015, 0.03); 
     
-    float cloudDayFact = smoothstep(-0.1, 0.15, sunDir.y);
+    float cloudDayFact = smoothstep(-0.1, 0.15, sunDir.y); 
     vec3 cColor = mix(cloudNight, mix(cloudSunset, cloudDay, smoothstep(-0.05, 0.25, sunDir.y)), cloudDayFact);
     
     float sDot = max(0.0, dot(rd, sunDir));
-    cColor += vec3(1.0, 0.6, 0.2) * exp2(5.0 * log2(sDot + 0.0001)) * smoothstep(-0.1, 0.3, sunDir.y) * 0.5;
+    cColor += vec3(1.0, 0.6, 0.2) * pow(sDot, 5.0) * smoothstep(-0.1, 0.3, sunDir.y) * 0.5; 
     return cColor;
 }
 
@@ -896,27 +551,30 @@ void main() {
     vec2 uv = (gl_FragCoord.xy - 0.5 * u_res.xy) / u_res.y;
     float t = u_time * 0.3;
     
-    float shakeIntensity = u_warp * u_warp * u_warp * u_warp * u_warp * 0.04;
+    float shakeIntensity = pow(u_warp, 5.0) * 0.04;
     vec2 cameraShake = vec2(sin(u_time * 150.0), cos(u_time * 130.0)) * shakeIntensity;
     uv += cameraShake;
 
     float solarEase = u_warp * u_warp * (3.0 - 2.0 * u_warp);
-    float currentSunY = mix(0.15 + u_mouse.y * 1.0, -1.5, solarEase);
-    vec3 sunDir = normalize(vec3(u_mouse.x * 1.5, currentSunY, 1.0));
-    vec3 moonDir = normalize(vec3(-u_mouse.x * 1.5, -currentSunY - 0.1, 1.0));
-
-    vec3 ro = vec3(0, 1.5, t * (2.0 + u_warp * 35.0));
-    vec3 rd = normalize(vec3(uv.x, uv.y - 0.1, 1.1 + u_warp * 0.6));  
     
+    float currentSunY = mix(0.5 + u_mouse.y * 1.2, -1.5, solarEase);
+    vec3 sunDir = normalize(vec3(u_mouse.x * 1.5, currentSunY, 1.0));
+    vec3 moonDir = normalize(vec3(-u_mouse.x * 1.5, -currentSunY + 0.15, -1.0));
+
+    // FIX for "Plain Tidals": Keep camera mathematically anchored.
+    // Time inherently pans the waves, simulating infinite forward flight without breaking 32-bit float limits!
+    vec3 ro = vec3(0, 1.5, u_warp * 35.0); 
+    vec3 rd = normalize(vec3(uv.x, uv.y - 0.1, 1.1 + u_warp * 0.6)); 
+
     float dayFactor = smoothstep(-0.02, 0.15, sunDir.y);
     float nightFactor = 1.0 - dayFactor;
-    float trueNight = smoothstep(-0.02, -0.15, sunDir.y);
     
-    vec3 nightZenith = vec3(0.0, 0.0005, 0.002); 
-    vec3 nightHorizon = vec3(0.001, 0.004, 0.012);
-    vec3 dayZenith = vec3(0.05, 0.15, 0.4);     
+    vec3 nightZenith = vec3(0.000, 0.001, 0.005); 
+    vec3 nightHorizon = vec3(0.002, 0.008, 0.025);
+    vec3 dayZenith = vec3(0.05, 0.15, 0.4);
+    
     vec3 dayHorizon = vec3(0.35, 0.65, 0.85); 
-    vec3 sunsetHorizon = vec3(1.0, 0.35, 0.1);    
+    vec3 sunsetHorizon = vec3(1.0, 0.35, 0.1);
     
     vec3 zenith = mix(nightZenith, dayZenith, dayFactor);
     vec3 horizon = mix(nightHorizon, mix(sunsetHorizon, dayHorizon, smoothstep(0.0, 0.4, sunDir.y)), dayFactor);
@@ -924,357 +582,296 @@ void main() {
     float sunsetGlow = smoothstep(-0.15, 0.1, sunDir.y) * smoothstep(0.4, -0.05, sunDir.y);
     horizon += vec3(1.0, 0.4, 0.1) * sunsetGlow * pow(max(0.0, dot(rd, sunDir)), 1.5);
     
-    vec3 col = mix(horizon, zenith, smoothstep(-0.2, 0.6, rd.y));
+    float skyGrad = smoothstep(-0.2, 0.6, rd.y);
+    vec3 col = mix(horizon, zenith, skyGrad);
+    
     float sunMask = smoothstep(-0.05, 0.02, sunDir.y);
     float moonMask = smoothstep(-0.05, 0.02, moonDir.y);
 
-    if (rd.y >= 0.0) {
-        if(trueNight > 0.05) {
-            vec2 nebUV = rd.xz / (abs(rd.y) + 0.001);
-            float neb = noise(nebUV * 2.0 + u_time * 0.01) * noise(nebUV * 4.0 - u_time * 0.01);
-            col += vec3(0.08, 0.03, 0.12) * neb * trueNight * smoothstep(0.0, 0.3, rd.y) * 0.6 * (1.0 - smoothstep(0.2, 0.8, u_warp));
-            col += GetStars(rd, trueNight, false) * smoothstep(-0.1, 0.2, rd.y);
-            col += GetMeteors(rd, trueNight) * smoothstep(-0.1, 0.15, rd.y);
-        }
-
-        float cloudAlpha = getClouds(rd, u_time, false);
-        if(cloudAlpha > 0.0) col = mix(col, getCloudColor(rd, sunDir), cloudAlpha * 0.65);
-
-        float sunDot = max(0.0, dot(rd, sunDir));
-        float sunAltD = max(0.0, sunDir.y);
-        vec3 coreColor = mix(vec3(1.0, 0.7, 0.4), vec3(1.0, 0.98, 0.95), smoothstep(0.0, 0.3, sunAltD));
-        vec3 glowColor = mix(vec3(1.0, 0.25, 0.05), vec3(1.0, 0.8, 0.5), smoothstep(0.0, 0.4, sunAltD));
+    // CTO PHILOSOPHY 1: CULLING THE UNSEEN. GPU jumps past this block during daytime!
+    if(nightFactor > 0.01) {
+        vec2 nebUV = rd.xz / (abs(rd.y) + 0.001);
+        float neb = noise(nebUV * 2.0 + u_time * 0.01) * noise(nebUV * 4.0 - u_time * 0.01);
+        vec3 milkyWay = vec3(0.08, 0.03, 0.12) * neb * nightFactor * smoothstep(0.0, 0.3, rd.y) * 0.6;
+        col += milkyWay * (1.0 - smoothstep(0.2, 0.8, u_warp));
         
-        vec3 cinematicSun = coreColor * (smoothstep(0.9985, 0.9998, sunDot) * 2.5);
-        cinematicSun += glowColor * (exp2(180.0 * log2(sunDot + 0.0001)) * 1.5);            
-        cinematicSun += mix(vec3(1.0, 0.1, 0.0), glowColor, 0.5) * (exp2(12.0 * log2(sunDot + 0.0001)) * 0.4);
-        col += cinematicSun * sunMask;
-        
-        float moonDot = max(0.0, dot(rd, moonDir));
-        vec3 moonRight = normalize(cross(vec3(0.0, 1.0, 0.0), moonDir));
-        vec3 moonUp = cross(moonDir, moonRight);
-        vec2 moonUV = vec2(dot(rd, moonRight), dot(rd, moonUp)) * 45.0;
-        
-        float craters = 0.5;
-        if (u_quality > 0.7) craters = noise(moonUV * 8.0) * 0.6 + noise(moonUV * 20.0) * 0.4;
-        
-        vec3 moonSurface = mix(vec3(0.5, 0.55, 0.6), vec3(1.0, 0.98, 0.95), craters);
-        float moonDist = clamp((1.0 - moonDot) / (1.0 - 0.9993), 0.0, 1.0);
-        
-        vec3 cinematicMoon = moonSurface * sqrt(1.0 - moonDist * moonDist) * smoothstep(0.9993, 0.99945, moonDot) * 2.2; 
-        cinematicMoon += vec3(0.7, 0.85, 1.0) * (exp2(250.0 * log2(moonDot + 0.0001)) * 1.2 + exp2(70.0 * log2(moonDot + 0.0001)) * 0.5);
-        col += cinematicMoon * trueNight * moonMask;
-        col += vec3(0.04, 0.05, 0.1) * (exp2(8.0 * log2(moonDot + 0.0001)) * 0.15 + exp2(25.0 * log2(moonDot + 0.0001)) * 0.08) * trueNight;
+        col += GetStars(rd, nightFactor, false) * smoothstep(-0.1, 0.2, rd.y);
     }
+
+    float cloudAlpha = getClouds(rd, u_time, false);
+    if(cloudAlpha > 0.0) {
+        col = mix(col, getCloudColor(rd, sunDir), cloudAlpha * 0.65);
+    }
+
+    float sunDot = max(0.0, dot(rd, sunDir));
+    float sunAlt = max(0.0, sunDir.y);
+    
+    vec3 coreColor = mix(vec3(1.0, 0.7, 0.4), vec3(1.0, 0.98, 0.95), smoothstep(0.0, 0.3, sunAlt));
+    vec3 glowColor = mix(vec3(1.0, 0.25, 0.05), vec3(1.0, 0.8, 0.5), smoothstep(0.0, 0.4, sunAlt));
+    
+    float sunCore = smoothstep(0.9985, 0.9998, sunDot) * 2.5; 
+    float sunInnerGlow = pow(sunDot, 180.0) * 1.5;            
+    float sunOuterGlow = pow(sunDot, 50.0) * 0.8;             
+    float sunAtmosphere = pow(sunDot, 12.0) * 0.4;            
+    
+    vec3 cinematicSun = coreColor * sunCore;
+    cinematicSun += glowColor * sunInnerGlow;
+    cinematicSun += glowColor * sunOuterGlow;
+    cinematicSun += mix(vec3(1.0, 0.1, 0.0), glowColor, 0.5) * sunAtmosphere;
+    col += cinematicSun * sunMask;
+    
+    float moonDot = max(0.0, dot(rd, moonDir));
+    float moonCore = smoothstep(0.999, 0.9998, moonDot) * 2.5; 
+    float moonGlow = pow(moonDot, 120.0) * 0.8 + pow(moonDot, 30.0) * 0.3;
+    col += vec3(0.8, 0.9, 1.0) * (moonCore + moonGlow) * nightFactor * moonMask;
 
     if(rd.y < 0.0) {
         float d = -(ro.y) / min(rd.y, -0.002); 
+        vec3 p = ro + rd * d;
         
-        // Pillar 1: Contextual Ray Early-Z Termination (Massive Performance Gain)
-        if (d > 250.0) {
-            col = mix(horizon, vec3(0.01, 0.02, 0.04), trueNight * 0.5); 
-        } else {
-            vec3 p = ro + rd * d;
-            
-            float hOffset = GetWaterHeight(p, false);
-            p += rd * (hOffset / max(abs(rd.y), 0.05));
-            
-            // Pillar 2 LOD: Cut off extreme micro detail at distance dynamically
-            bool doMicro = (d < 100.0);
-            
-            vec3 N_sharp = GetNormal(p, doMicro);  
-            vec3 N_smooth = GetNormal(p, false);          
-            vec3 N_spec = normalize(mix(N_smooth, N_sharp, 0.9)); 
-            
-            vec3 refR_Planar = reflect(rd, vec3(0, 1, 0)); 
-            vec3 reflectedSky = mix(horizon, zenith, smoothstep(-0.2, 0.6, reflect(rd, N_smooth).y));
-            
-            if(trueNight > 0.05 && u_quality > 0.8) {
-                reflectedSky += vec3(0.04, 0.015, 0.06) * noise(refR_Planar.xz * 2.0) * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
-                reflectedSky += GetStars(refR_Planar, trueNight, true);
-                reflectedSky += GetMeteors(refR_Planar, trueNight) * 0.4;
-            }
-
-            float refCloudAlpha = getClouds(refR_Planar, u_time, true);
-            if(refCloudAlpha > 0.0) reflectedSky = mix(reflectedSky, getCloudColor(refR_Planar, sunDir), refCloudAlpha * 0.55);
-
-            float fresnel = exp2(5.0 * log2(1.0 - max(0.0, dot(-rd, N_sharp)) + 0.0001));
-            float waveLocalH = GetWaterHeight(p, false);
-            
-            vec3 tidalColor = mix(u_waterColor * 0.2, u_waterColor * 2.2, smoothstep(-u_waveHeight, u_waveHeight * 1.5, waveLocalH));
-            vec3 nightWater = mix(vec3(0.000, 0.001, 0.003) + tidalColor * 0.05, vec3(0.015, 0.035, 0.085) + tidalColor * 0.25, max(0.0, moonDir.y));
-            vec3 waterBase = mix(nightWater, tidalColor, dayFactor);
-            
-            vec3 waterCol = mix(waterBase, reflectedSky * 0.85, 0.15 + 0.85 * fresnel);
-            
-            vec3 waterSunDir = normalize(vec3(sunDir.x, max(sunDir.y, 0.001), sunDir.z));
-            vec3 waterMoonDir = normalize(vec3(moonDir.x, max(moonDir.y, 0.001), moonDir.z));
-
-            float smoothSpecDot = max(0.0, dot(N_smooth, normalize(-rd + waterSunDir)));
-            float specTermSun = exp2(400.0 * log2(max(0.0, dot(N_spec, normalize(-rd + waterSunDir))) + 0.0001)) * 4.5 + exp2(80.0 * log2(smoothSpecDot + 0.0001)) * 0.8;
-            waterCol += mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.9, 0.7), smoothstep(0.0, 0.3, waterSunDir.y)) * specTermSun * sunMask;
-            
-            float smoothMoonSpecDot = max(0.0, dot(N_smooth, normalize(-rd + waterMoonDir)));
-            float moonSpecIntensity = exp2(500.0 * log2(max(0.0, dot(N_spec, normalize(-rd + waterMoonDir))) + 0.0001)) * 2.5 + exp2(80.0 * log2(smoothMoonSpecDot + 0.0001)) * 0.8;
-            
-            waterCol += vec3(0.5, 0.65, 0.85) * moonSpecIntensity * trueNight * moonMask;
-            
-            float diffuseMoon = max(0.0, dot(N_smooth, waterMoonDir));
-            waterCol += (vec3(0.02, 0.028, 0.05) + tidalColor * 0.15) * (diffuseMoon * 0.4) * trueNight;
-            
-            col = mix(mix(horizon, waterCol, smoothstep(180.0, 5.0, d)), horizon * 0.5, smoothstep(30.0, 150.0, d) * trueNight * 0.6);
+        // Pass "isRef" booleans downward to activate CTO Reflection LOD Cheats
+        vec3 N_sharp = GetNormal(p, true, false);  
+        vec3 N_smooth = GetNormal(p, false, false); 
+        
+        vec3 refR_Planar = reflect(rd, vec3(0, 1, 0)); 
+        float refSkyGrad = smoothstep(-0.2, 0.6, reflect(rd, N_smooth).y);
+        vec3 reflectedSky = mix(horizon, zenith, refSkyGrad);
+        
+        // CULLING UNSEEN REFLECTIONS
+        if(nightFactor > 0.01) {
+            reflectedSky += vec3(0.04, 0.015, 0.06) * noise(refR_Planar.xz * 2.0) * noise(refR_Planar.xz * 4.0) * nightFactor * smoothstep(0.0, 0.3, refR_Planar.y);
+            reflectedSky += GetStars(refR_Planar, nightFactor, true);
         }
+
+        // Generate water reflection clouds
+        float refCloudAlpha = getClouds(refR_Planar, u_time, true);
+        if(refCloudAlpha > 0.0) {
+            reflectedSky = mix(reflectedSky, getCloudColor(refR_Planar, sunDir), refCloudAlpha * 0.55);
+        }
+
+        float fresnel = pow(1.0 - max(0.0, dot(-rd, N_sharp)), 5.0);
+        
+        vec3 waterBase = mix(vec3(0.000, 0.001, 0.003), u_waterColor, dayFactor);
+        vec3 waterCol = mix(waterBase, reflectedSky * 0.85, 0.15 + 0.85 * fresnel);
+        
+        float specDot = max(0.0, dot(N_sharp, normalize(-rd + sunDir)));
+        float smoothSpecDot = max(0.0, dot(N_smooth, normalize(-rd + sunDir)));
+        
+        float sunSpecCore = pow(specDot, 180.0) * 5.0; 
+        float sunSpecGlow = pow(smoothSpecDot, 40.0) * 2.0; 
+        float sunTrail = pow(max(0.0, dot(normalize(p.xz - ro.xz), sunDir.xz)), 35.0);
+        
+        vec3 waterSpecColor = mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.9, 0.7), smoothstep(0.0, 0.3, sunDir.y));
+        waterCol += waterSpecColor * (sunSpecCore + sunSpecGlow) * sunTrail * sunMask; 
+        
+        float moonSpecDot = max(0.0, dot(N_sharp, normalize(-rd + moonDir)));
+        float moonSpec = pow(moonSpecDot, 150.0) * 3.0 + pow(moonSpecDot, 30.0) * 1.0;
+        float moonTrail = pow(max(0.0, dot(normalize(p.xz - ro.xz), moonDir.xz)), 30.0);
+        waterCol += vec3(0.6, 0.8, 1.0) * moonSpec * moonTrail * nightFactor * moonMask;
+        
+        col = mix(horizon, waterCol, smoothstep(250.0, 5.0, d));
     }
 
     float hyperGlow = pow(u_warp, 3.5) * 2.5;
+    vec3 warpBase = vec3(0.85, 0.95, 1.0) * hyperGlow;
+    
     float caSplit = u_warp * length(uv) * 1.5;
-    col += vec3(0.85, 0.95, 1.0) * hyperGlow + vec3(caSplit, 0.0, -caSplit) * u_warp * 1.5;
+    warpBase += vec3(caSplit, 0.0, -caSplit) * u_warp * 1.5;
+    
+    col += warpBase;
 
     col = (col*(2.51*col+0.03))/(col*(2.43*col+0.59)+0.14);
     fragColor = vec4(pow(col, vec3(1.0/2.2)), 1.0);
 }</script>
     <script>
-        const CLOUD_SAVE_ENDPOINT = "https://your-api-endpoint.com/v1/config";
-        const CLOUD_AUTH_BEARER = "";
-
-        // PRECISION TIME ENGINE: Keeps uniform values perfectly synchronized across infinite time scales!
-        let totalFrames = 0;
-        let framesAnalyzed = 0;
-        let lastTime = 0;
-        let logicalTime = 0; 
-        let analysisStartTime = performance.now();
-        
-        const targetFPS = 60;
-        const frameInterval = 1000 / targetFPS;
-
         const canvas = document.getElementById('v');
-        
-        let mX = 0, mY = 0.2;
-        let targetMX = 0, targetMY = 0.2;
-        
-        let gl, prg, isW = false, warp = 0, redirected = false;
-        let isTouching = false;
-        let waveTime = 0;
-        let detailFade = 1.0; 
-        let TARGET = "https://www.linkedin.com/in/rahatreza100/";
+        let gl, prg, isW = false, warp = 0, mX = 0, mY = 0.2, redirected = false; 
+        let offsetMX = 0, offsetMY = 0; 
+        let isTouching = false; 
+        const TARGET = "https://www.linkedin.com/in/rahatreza100/";
 
         let isPaused = false;
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-        // Pillar 5 Zero-Allocation Cache: Store window dimensions to avoid Layout Thrashing on drag
+        // CTO PHILOSOPHY 3: AGGRESSIVE DYNAMIC RESOLUTION SCALING
+        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.0) : Math.min(window.devicePixelRatio, 2.0);
+        let currentDPR = baseDPR;
+        let targetDPR = baseDPR;
+
+        // PREVENT LAYOUT THRASHING: Cache width/height instead of querying on touch
         let wW = window.innerWidth;
         let wH = window.innerHeight;
 
-        // ENTERPRISE SCALING: Capped at 1.0 DPR minimum on mobile for immediate 60FPS interaction
-        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.0) : Math.min(window.devicePixelRatio, 2.0);
-        let currentDPR = baseDPR; 
-        let globalQuality = isMobile ? 0.6 : 1.0; 
+        if (isMobile) document.getElementById('cursor').style.display = 'none';
 
         const configKeys =['energy', 'height', 'stars', 'r', 'g', 'b'];
-        const textKeys =['mainTitle', 'btnText', 'cineTitle', 'cineSub1', 'cineSub2', 'targetUrl'];
-
-        const defaultConfig = {
-            energy: 2.2, height: 0.05, stars: 600.0, r: 0.01, g: 0.04, b: 0.08,
-            mainTitle: "RAHATIL", btnText: "Initialize", cineTitle: "Welcome, Rahatil",
-            cineSub1: "Calibrating Tidal Engine...", cineSub2: "Redirecting to Terminal",
-            targetUrl: "https://www.linkedin.com/in/rahatreza100/"
-        };
-
         let uLocs = {};
+        const defaultConfig = { energy: 2.2, height: 0.05, stars: 600.0, r: 0.01, g: 0.04, b: 0.08 };
         let engineConfig = { ...defaultConfig };
 
         try {
             const savedData = localStorage.getItem('rahatil_engine_config');
             if (savedData) { engineConfig = { ...defaultConfig, ...JSON.parse(savedData) }; }
-        } catch (e) { }
-
-        function applyTextConfig() {
-            document.getElementById('ui-mainTitle').innerText = engineConfig.mainTitle;
-            document.getElementById('ui-btnText').innerText = engineConfig.btnText;
-            document.getElementById('ui-cineTitle').innerText = engineConfig.cineTitle;
-            document.getElementById('ui-cineSub1').innerText = engineConfig.cineSub1;
-            document.getElementById('ui-cineSub2').innerText = engineConfig.cineSub2;
-            TARGET = engineConfig.targetUrl;
-        }
+        } catch (e) { console.error(e); }
 
         function syncUIWithConfig() {
             configKeys.forEach(k => {
                 document.getElementById(`inp-${k}`).value = engineConfig[k];
                 document.getElementById(`val-${k}`).innerText = parseFloat(engineConfig[k]).toFixed(k === 'stars' ? 0 : 2);
             });
-            textKeys.forEach(k => {
-                document.getElementById(`inp-${k}`).value = engineConfig[k] || '';
-            });
-            applyTextConfig();
         }
         syncUIWithConfig();
 
-        let audioCtx, waterSource, waterFilter, waterGain;
-        let windSource, windFilter, windGain;
-        let ambientSource, ambientFilter, ambientGain;
-        let nightSource, nightFilter, nightGain;
-        let droneSource, droneOsc, droneGain, masterPanner;
+        let audioCtx;
+        let waterSource, waterFilter, waterGain;
         let audioInit = false;
-        let audioInitTimer = null, animFrameId = null;
-        let currentDayFactor = 0.5, currentNightFactor = 0.5;
+        let gyroActive = false;
+        let lastTouchTime = 0;
+        let targetMX = 0, targetMY = 0.2; 
+        
+        let lastBeta = null;
+        let lastGamma = null;
 
-        window.enterExperience = function () {
-            const intro = document.getElementById('intro-layer');
-            const uiL = document.getElementById('ui-layer');
-            if (intro) {
-                intro.style.opacity = '0';
-                intro.style.pointerEvents = 'none';
-                intro.style.backdropFilter = 'blur(0px)';
-                setTimeout(() => { intro.style.display = 'none'; }, 1500);
+        function handleOrientation(event) {
+            if (event.beta === null || event.gamma === null) return;
+            gyroActive = true;
+
+            let angle = (screen.orientation ? screen.orientation.angle : window.orientation) || 0;
+            let b = event.beta;
+            let g = event.gamma;
+
+            if (lastBeta !== null && Math.abs(b - lastBeta) > 60) b = lastBeta;
+            if (lastGamma !== null && Math.abs(g - lastGamma) > 60) g = lastGamma;
+
+            lastBeta = b;
+            lastGamma = g;
+
+            b = Math.max(-85, Math.min(85, b));
+            g = Math.max(-85, Math.min(85, g));
+
+            let finalX = 0, finalY = 0;
+            const TILT_DIVISOR = 60.0;
+
+            if (angle === 90) {
+                finalX = b / TILT_DIVISOR;
+                finalY = (g + 45.0) / TILT_DIVISOR;
+            } else if (angle === -90 || angle === 270) {
+                finalX = -b / TILT_DIVISOR;
+                finalY = -(g - 45.0) / TILT_DIVISOR;
+            } else {
+                finalX = g / TILT_DIVISOR;
+                finalY = (b - 45.0) / TILT_DIVISOR; 
             }
-            if (uiL) uiL.style.opacity = '1';
-            unlockAudio();
-        };
 
-        if (isMobile) {
-            document.getElementById('cursor').style.display = 'none';
-            const introLayer = document.getElementById('intro-layer');
-            if (introLayer) introLayer.style.display = 'none';
-            const uiLayer = document.getElementById('ui-layer');
-            if (uiLayer) uiLayer.style.display = 'flex';
+            targetMX = Math.max(-1.5, Math.min(1.5, finalX));
+            targetMY = Math.max(-0.9, Math.min(0.9, finalY));
         }
 
-        function unlockAudio() {
-            if (isMobile || audioInit) return; // Completely disabled audio execution on Mobile targets!
+        if (window.DeviceOrientationEvent) {
+            if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
+        } else {
+            window.addEventListener('deviceorientation', handleOrientation);
+        }
+
+        function initExperience() {
+            if (audioInit || isMobile) return; // MOBILE CPU SAVER: Sound graphs fully disabled on weak mobile chips
             audioInit = true;
 
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            audioCtx = new AudioContext();
-
-            try {
-                const buffer = audioCtx.createBuffer(1, 1, 22050);
-                const source = audioCtx.createBufferSource();
-                source.buffer = buffer;
-                source.connect(audioCtx.destination);
-                if (source.start) source.start(0); else source.noteOn(0);
-            } catch (e) { }
-
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            audioInitTimer = setTimeout(() => { buildAudioGraph(); }, 800);
-        }
-
-        document.addEventListener('touchstart', unlockAudio, { once: true, passive: true });
-        document.addEventListener('click', unlockAudio, { once: true });
-
-        function buildAudioGraph() {
-            if (isMobile) return; 
-
-            const bufferSize = Math.floor(audioCtx.sampleRate * 0.8);
-            if (audioCtx.createStereoPanner) {
-                try {
-                    masterPanner = audioCtx.createStereoPanner();
-                    masterPanner.pan.value = 0;
-                    masterPanner.connect(audioCtx.destination);
-                } catch (e) { }
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
             }
-            let audioDest = masterPanner ? masterPanner : audioCtx.destination;
 
-            setTimeout(() => {
-                const waterBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const waterOut = waterBuffer.getChannelData(0);
-                let lastOut = 0;
-                for (let i = 0; i < bufferSize; i++) {
-                    let white = Math.random() * 2 - 1;
-                    waterOut[i] = (lastOut + (0.02 * white)) / 1.02;
-                    lastOut = waterOut[i]; waterOut[i] *= 3.5;
-                }
-                waterSource = audioCtx.createBufferSource();
-                waterSource.buffer = waterBuffer; waterSource.loop = true;
-                waterFilter = audioCtx.createBiquadFilter();
-                waterFilter.type = 'lowpass'; waterFilter.frequency.value = 400; waterFilter.Q.value = 0.5;
-                waterGain = audioCtx.createGain(); waterGain.gain.value = 0.0;
-                waterSource.connect(waterFilter).connect(waterGain).connect(audioDest);
-                waterSource.start(0);
-                waterGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 2.0);
-            }, 0);
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
 
-            setTimeout(() => {
-                const windBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const windOut = windBuffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) { windOut[i] = (Math.random() * 2 - 1) * 0.5; }
-                windSource = audioCtx.createBufferSource();
-                windSource.buffer = windBuffer; windSource.loop = true;
-                windFilter = audioCtx.createBiquadFilter();
-                windFilter.type = 'bandpass'; windFilter.frequency.value = 800; windFilter.Q.value = 0.3;
-                windGain = audioCtx.createGain(); windGain.gain.value = 0.0;
-                windSource.connect(windFilter).connect(windGain).connect(audioDest);
-                windSource.start(0);
-                windGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 2.5);
-            }, 100);
+            const bufferSize = audioCtx.sampleRate * 2;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
 
-            setTimeout(() => {
-                const ambientBuffer = audioCtx.createBuffer(2, bufferSize, audioCtx.sampleRate);
-                for (let c = 0; c < 2; c++) {
-                    const ambOut = ambientBuffer.getChannelData(c);
-                    for (let i = 0; i < bufferSize; i++) {
-                        let t = i / audioCtx.sampleRate;
-                        let pad = Math.sin(t * 55 * Math.PI * 2) * 0.1 + Math.sin(t * 82.5 * Math.PI * 2) * 0.08 + Math.sin(t * 110 * Math.PI * 2) * 0.06;
-                        ambOut[i] = (pad * 0.3) + (Math.random() * 2 - 1) * 0.02;
-                    }
-                }
-                ambientSource = audioCtx.createBufferSource();
-                ambientSource.buffer = ambientBuffer; ambientSource.loop = true;
-                ambientFilter = audioCtx.createBiquadFilter();
-                ambientFilter.type = 'lowpass'; ambientFilter.frequency.value = 2000;
-                ambientGain = audioCtx.createGain(); ambientGain.gain.value = 0.0;
-                ambientSource.connect(ambientFilter).connect(ambientGain).connect(audioDest);
-                ambientSource.start(0);
-                ambientGain.gain.setTargetAtTime(0.04, audioCtx.currentTime, 3.0);
-            }, 200);
+            let lastOut = 0;
+            for (let i = 0; i < bufferSize; i++) {
+                let white = Math.random() * 2 - 1;
+                output[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = output[i];
+                output[i] *= 3.5;
+            }
 
-            setTimeout(() => {
-                droneOsc = audioCtx.createOscillator(); droneOsc.type = 'sine'; droneOsc.frequency.value = 40;
-                const droneOsc2 = audioCtx.createOscillator(); droneOsc2.type = 'sine'; droneOsc2.frequency.value = 60;
-                const droneOsc3 = audioCtx.createOscillator(); droneOsc3.type = 'triangle'; droneOsc3.frequency.value = 80;
-                droneGain = audioCtx.createGain(); droneGain.gain.value = 0.0;
-                const droneFilter = audioCtx.createBiquadFilter(); droneFilter.type = 'lowpass'; droneFilter.frequency.value = 100;
-                droneOsc.connect(droneGain); droneOsc2.connect(droneGain); droneOsc3.connect(droneGain);
-                droneGain.connect(droneFilter).connect(audioDest);
-                droneOsc.start(0); droneOsc2.start(0); droneOsc3.start(0);
-                droneGain.gain.setTargetAtTime(0.03, audioCtx.currentTime, 3.0);
-            }, 300);
-        }
+            waterSource = audioCtx.createBufferSource();
+            waterSource.buffer = noiseBuffer;
+            waterSource.loop = true;
 
-        let hintRemoved = false;
-        function hideInteractionHint() {
-            if (hintRemoved) return;
-            hintRemoved = true;
-            const hint = document.getElementById('swipe-hint');
-            if (hint) {
-                hint.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
-                hint.style.opacity = '0';
-                hint.style.transform = 'translateY(10px)';
-                setTimeout(() => hint.remove(), 800);
+            waterFilter = audioCtx.createBiquadFilter();
+            waterFilter.type = 'lowpass';
+            waterFilter.frequency.value = 400;
+            waterFilter.Q.value = 0.5;
+
+            waterGain = audioCtx.createGain();
+            waterGain.gain.value = 0.0;
+
+            waterSource.connect(waterFilter).connect(waterGain).connect(audioCtx.destination);
+            waterSource.start(0);
+
+            if (!isW) {
+                waterGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+                waterGain.gain.linearRampToValueAtTime(0.18, audioCtx.currentTime + 1.5);
             }
         }
 
-        // Extremely safe DOM queryless touch handlers using cached width/height
-        const onTouchMove = (e) => {
-            hideInteractionHint();
+        const unlockExperience = () => { initExperience(); };
+        document.addEventListener('mousedown', unlockExperience, { once: true });
+        document.addEventListener('touchstart', unlockExperience, { once: true });
+
+        // LAYOUT THRASHING ELIMINATED: Using cached wW and wH instead of window.innerWidth
+        window.addEventListener('touchstart', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
-            isTouching = true; 
-            targetMX = ((e.touches[0].clientX / wW) * 2 - 1) * 1.5;
-            targetMY = ((1 - e.touches[0].clientY / wH) * 2 - 1) * 0.7;
-        };
+            if (e.cancelable) e.preventDefault(); 
+            isTouching = true;
+            lastTouchTime = Date.now();
+            
+            // INSTANT SCALING OVERRIDE: Dropping pixel count purely while actively touching maintains 60FPS tracking
+            if (isMobile && targetDPR > 0.5) {
+                targetDPR = 0.5;
+                currentDPR = 0.5;
+                resizeCanvas();
+            }
 
-        window.addEventListener('touchstart', onTouchMove, { passive: true });
-        window.addEventListener('touchmove', onTouchMove, { passive: true });
-        window.addEventListener('touchend', () => { isTouching = false; }, { passive: true });
-        window.addEventListener('touchcancel', () => { isTouching = false; }, { passive: true });
+            mX = ((e.touches[0].clientX / wW) * 2 - 1) * 1.5;
+            mY = ((1 - e.touches[0].clientY / wH) * 2 - 1) * 0.7;
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
+            if (e.cancelable) e.preventDefault();
+            isTouching = true;
+            lastTouchTime = Date.now();
+            mX = ((e.touches[0].clientX / wW) * 2 - 1) * 1.5;
+            mY = ((1 - e.touches[0].clientY / wH) * 2 - 1) * 0.7;
+        }, { passive: false });
+
+        window.addEventListener('touchend', () => { isTouching = false; });
+        window.addEventListener('touchcancel', () => { isTouching = false; });
 
         window.onmousemove = (e) => {
-            hideInteractionHint();
             if (isMobile) return;
-            targetMX = ((e.clientX / wW) * 2 - 1) * 1.5;
-            targetMY = ((1 - e.clientY / wH) * 2 - 1) * 0.7;
+            mX = ((e.clientX / wW) * 2 - 1) * 1.5;
+            mY = ((1 - e.clientY / wH) * 2 - 1) * 0.7;
             const cur = document.getElementById('cursor');
-            if (cur) { cur.style.left = e.clientX + 'px'; cur.style.top = e.clientY + 'px'; }
+            if (cur) {
+                cur.style.left = e.clientX + 'px';
+                cur.style.top = e.clientY + 'px';
+            }
         };
+
+        const targetFPS = 60;
+        const frameInterval = 1000 / targetFPS;
+        let lastTime = 0;
+        let lastRealTime = performance.now();
+        let framesAnalyzed = 0;
+        let droppedFrames = 0;
 
         document.addEventListener("visibilitychange", () => { isPaused = document.hidden; });
 
@@ -1282,23 +879,15 @@ void main() {
         window.addEventListener('resize', () => {
             wW = window.innerWidth;
             wH = window.innerHeight;
-            clearTimeout(resizeTimer); resizeTimer = setTimeout(resizeCanvas, 200);
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(resizeCanvas, 200);
         });
 
         function resizeCanvas() {
             if (!gl) return;
-            if (animFrameId) cancelAnimationFrame(animFrameId);
-            
             canvas.width = wW * currentDPR;
             canvas.height = wH * currentDPR;
             gl.viewport(0, 0, canvas.width, canvas.height);
-            
-            if (prg && uLocs.res) {
-                gl.useProgram(prg);
-                gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-                if (typeof globalQuality !== 'undefined') gl.uniform1f(uLocs.quality, globalQuality);
-            }
-            if (typeof render === "function" && gl) animFrameId = requestAnimationFrame(render);
         }
 
         const compile = (t, s) => {
@@ -1320,7 +909,9 @@ void main() {
             const fs = compile(gl.FRAGMENT_SHADER, document.getElementById('fs').text);
             if (!vs || !fs) return false;
 
-            gl.attachShader(prg, vs); gl.attachShader(prg, fs); gl.linkProgram(prg);
+            gl.attachShader(prg, vs);
+            gl.attachShader(prg, fs);
+            gl.linkProgram(prg);
 
             const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -1330,203 +921,169 @@ void main() {
             uLocs.time = gl.getUniformLocation(prg, 'u_time');
             uLocs.mouse = gl.getUniformLocation(prg, 'u_mouse');
             uLocs.warp = gl.getUniformLocation(prg, 'u_warp');
-            uLocs.wTime = gl.getUniformLocation(prg, 'u_waveTime');
+
             uLocs.wColor = gl.getUniformLocation(prg, 'u_waterColor');
             uLocs.wEnergy = gl.getUniformLocation(prg, 'u_waveEnergy');
             uLocs.wHeight = gl.getUniformLocation(prg, 'u_waveHeight');
             uLocs.sDensity = gl.getUniformLocation(prg, 'u_starDensity');
-            uLocs.quality = gl.getUniformLocation(prg, 'u_quality');
-            uLocs.warmup = gl.getUniformLocation(prg, 'u_warmup');
-            uLocs.detailFade = gl.getUniformLocation(prg, 'u_detailFade');
 
             resizeCanvas();
             return true;
         }
-
-        setTimeout(() => { if (initGL()) { canvas.style.opacity = '1'; animFrameId = requestAnimationFrame(render); } }, 50);
 
         canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); isPaused = true; }, false);
         canvas.addEventListener("webglcontextrestored", () => { initGL(); isPaused = false; }, false);
 
         function engage() {
             if (isW || !gl || document.getElementById('custom-panel').style.display === 'flex') return;
-
-            if (!isMobile) {
-                if (audioInitTimer) { clearTimeout(audioInitTimer); audioInitTimer = null; }
-                if (!audioInit) unlockAudio();
-                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            
+            if (!audioInit) initExperience();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
             }
 
             isW = true;
             document.getElementById('ui-layer').style.opacity = '0';
-            hideInteractionHint(); 
-            
             if (!isMobile) {
                 document.getElementById('cursor').style.transform = 'translate(-50%, -50%) scale(2.0)';
                 document.getElementById('cursor').style.opacity = '0.3';
             }
             document.getElementById('cinematic-layer').classList.add('active');
 
-            if (isMobile && 'vibrate' in navigator && typeof navigator.vibrate === 'function') {
-                navigator.vibrate([30, 200, 50, 150, 80, 100, 120, 50, 200, 50, 1000]);
+            if (isMobile) {
+                if ('vibrate' in navigator && typeof navigator.vibrate === 'function') {
+                    navigator.vibrate([30, 200, 50, 150, 80, 100, 120, 50, 200, 50, 1000]);
+                }
             }
-
-            if (!isMobile && waterGain && audioCtx) {
-                let ct = audioCtx.currentTime;
-                waterGain.gain.cancelScheduledValues(ct); waterGain.gain.setValueAtTime(waterGain.gain.value, ct); waterGain.gain.linearRampToValueAtTime(0, ct + 1.5);
-                if (windGain) windGain.gain.linearRampToValueAtTime(0, ct + 1.5);
-                if (ambientGain) ambientGain.gain.linearRampToValueAtTime(0, ct + 1.5);
-                if (nightGain) nightGain.gain.linearRampToValueAtTime(0, ct + 1.0);
-                if (droneGain) droneGain.gain.linearRampToValueAtTime(0, ct + 2.0);
+            
+            if (!isMobile && waterGain) {
+                waterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                waterGain.gain.setValueAtTime(waterGain.gain.value, audioCtx.currentTime);
+                waterGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 1.5);
             }
 
             if (!isMobile && audioCtx) {
                 const playBell = (freq, delay) => {
-                    let osc1 = audioCtx.createOscillator(); let osc2 = audioCtx.createOscillator(); let noteGain = audioCtx.createGain();
-                    osc1.type = 'sine'; osc2.type = 'triangle'; osc1.frequency.value = freq; osc2.frequency.value = freq * 1.005;
+                    let osc1 = audioCtx.createOscillator();
+                    let osc2 = audioCtx.createOscillator();
+                    let noteGain = audioCtx.createGain();
+
+                    osc1.type = 'sine';
+                    osc2.type = 'triangle';
+                    osc1.frequency.value = freq;
+                    osc2.frequency.value = freq * 1.005;
+
                     let t = audioCtx.currentTime + delay;
-                    noteGain.gain.setValueAtTime(0, t); noteGain.gain.linearRampToValueAtTime(0.15, t + 0.05); noteGain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
-                    osc1.connect(noteGain).connect(audioCtx.destination); osc2.connect(noteGain).connect(audioCtx.destination);
-                    osc1.start(t); osc1.stop(t + 2.5); osc2.start(t); osc2.stop(t + 2.5);
+
+                    noteGain.gain.setValueAtTime(0, t);
+                    noteGain.gain.linearRampToValueAtTime(0.15, t + 0.05);
+                    noteGain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
+
+                    osc1.connect(noteGain).connect(audioCtx.destination);
+                    osc2.connect(noteGain).connect(audioCtx.destination);
+
+                    osc1.start(t); osc1.stop(t + 2.5);
+                    osc2.start(t); osc2.stop(t + 2.5);
                 };
-                playBell(261.63, 0.0); playBell(392.00, 0.2); playBell(493.88, 0.4); playBell(587.33, 0.6); playBell(659.25, 0.8); playBell(1046.50, 1.2);
+
+                playBell(261.63, 0.0);
+                playBell(392.00, 0.2);
+                playBell(493.88, 0.4);
+                playBell(587.33, 0.6);
+                playBell(659.25, 0.8);
+                playBell(1046.50, 1.2);
             }
         }
 
-        // PERFECT LCM WRAP: Fixes the float precision breakdown if users run the app for a long time
-        const WAVE_PERIOD = 20.0 * Math.PI;
-
         function render(now) {
-            animFrameId = requestAnimationFrame(render);
+            requestAnimationFrame(render);
             if (isPaused || !gl) return;
 
-            if (lastTime === 0) lastTime = now;
             let elapsed = now - lastTime;
-            if (elapsed < 16.0) return; 
-            
-            let dtLogical = Math.min(elapsed, 50); 
-            lastTime = now;
+            if (elapsed < frameInterval) return;
+            lastTime = now - (elapsed % frameInterval);
 
-            // LOGICAL TIME ENGINE: Prevents massive time jump float explosions when switching tabs
-            logicalTime += dtLogical;
-            waveTime = (waveTime + (dtLogical * 0.001) * engineConfig.energy) % WAVE_PERIOD;
+            let realDelta = now - lastRealTime;
+            lastRealTime = now;
 
-            let dtFactor = dtLogical / 16.666;
-            
-            // KINETIC SMOOTHING ENGINE
-            let lerpSpeed = 1.0 - Math.pow(0.85, dtFactor);
-            mX += (targetMX - mX) * lerpSpeed;
-            mY += (targetMY - mY) * lerpSpeed;
+            let dtFactor = Math.min(elapsed, 50) / 16.666;
 
-            // INTERACTION BLEND: Dissolve heavy shader noise while swiping to lock frame pacing
-            let targetFade = isTouching ? 0.0 : 1.0;
-            detailFade += (targetFade - detailFade) * (0.15 * dtFactor);
+            // CTO PHILOSOPHY 3: AGGRESSIVE DRS 
+            // Frame Monitor built directly into the render loop. Drops scale immediately if device starts "sweating".
+            if (realDelta > 33) droppedFrames++; 
+            framesAnalyzed++;
 
-            totalFrames++;
-            let analysisInterval = (totalFrames < 300) ? 20 : 60; 
-
-            // REAL-TIME TELEMETRY AUTO-SCALING (Locked out during Touch to prevent drag stutter)
-            if (totalFrames > 30) {
-                if (isTouching) {
-                    framesAnalyzed = 0; 
-                    analysisStartTime = now;
-                } else if (framesAnalyzed >= analysisInterval) {
-                    let elapsedAnalysis = now - analysisStartTime;
-                    let actualFPS = (framesAnalyzed / elapsedAnalysis) * 1000;
-
-                    if (actualFPS < 50 && currentDPR > 1.0) {
-                        currentDPR = Math.max(1.0, currentDPR - 0.2); 
-                        resizeCanvas();
-                    } else if (actualFPS > 58 && currentDPR < baseDPR) {
-                        currentDPR = Math.min(baseDPR, currentDPR + 0.1); 
-                        resizeCanvas();
-                    }
-                    
-                    if (actualFPS < 45) globalQuality = Math.max(0.4, globalQuality - 0.2);
-                    else if (actualFPS > 55) globalQuality = Math.min(1.0, globalQuality + 0.1);
-
-                    framesAnalyzed = 0;
-                    analysisStartTime = now;
+            if (framesAnalyzed >= 30) {
+                if (droppedFrames > 3) {
+                    targetDPR = Math.max(0.5, targetDPR - 0.25);
+                } else if (droppedFrames === 0 && !isTouching) {
+                    targetDPR = Math.min(baseDPR, targetDPR + 0.25);
                 }
-                framesAnalyzed++;
+                
+                if (currentDPR !== targetDPR) {
+                    currentDPR = targetDPR;
+                    resizeCanvas();
+                }
+                framesAnalyzed = 0;
+                droppedFrames = 0;
             }
 
-            let solarEase = warp * warp * (3.0 - 2.0 * warp);
-            let currentSunY = 0.15 + mY * 1.0;
-            let sunY = currentSunY * (1 - solarEase) + (-1.5) * solarEase;
-            let dayFactor = Math.max(0, Math.min(1, (sunY + 0.02) / 0.17));
-            let nightFactor = 1.0 - dayFactor;
-
-            currentDayFactor = currentDayFactor + (dayFactor - currentDayFactor) * 0.05;
-            currentNightFactor = currentNightFactor + (nightFactor - currentNightFactor) * 0.05;
-            let isSunset = (sunY > -0.1 && sunY < 0.15) ? 1.0 : 0.0;
-            let sunsetFactor = isSunset * (1.0 - Math.abs(sunY - 0.02) / 0.15);
+            let timeSinceTouch = Date.now() - lastTouchTime;
+            if (gyroActive) {
+                if (isTouching || timeSinceTouch < 150) {
+                    offsetMX = mX - targetMX;
+                    offsetMY = mY - targetMY;
+                    if (isTouching) lastTouchTime = Date.now();
+                } else {
+                    if (timeSinceTouch > 2000) {
+                        let decay = Math.pow(0.95, dtFactor);
+                        offsetMX *= decay; 
+                        offsetMY *= decay;
+                    }
+                    let destX = targetMX + offsetMX;
+                    let destY = targetMY + offsetMY;
+                    
+                    let lerpAmt = 1.0 - Math.pow(0.93, dtFactor);
+                    mX += (destX - mX) * lerpAmt;
+                    mY += (destY - mY) * lerpAmt;
+                }
+            }
 
             if (isW) {
-                warp = Math.min(1.0, warp + (0.008 * dtFactor));
-                if (warp >= 1.0 && !redirected) { redirected = true; window.location.href = TARGET; }
-            } else if (!isMobile && audioInit && audioCtx && audioCtx.state === 'running') {
-                let waveCycle = Math.sin(waveTime * 0.3);
+                warp = Math.min(1.0, warp + (0.008 * dtFactor)); 
 
-                if (masterPanner && masterPanner.pan) {
-                    let panTarget = Math.max(-1.0, Math.min(1.0, mX * 0.8));
-                    masterPanner.pan.setTargetAtTime(panTarget, audioCtx.currentTime, 0.2);
+                if (warp >= 1.0 && !redirected) {
+                    redirected = true;
+                    window.location.href = TARGET;
                 }
-                if (waterFilter && waterSource && waterGain) {
-                    let targetWaterFreq = 250 + (waveCycle * 100) + (engineConfig.height * 600) - (mY * 150);
-                    waterFilter.frequency.setTargetAtTime(Math.max(150, targetWaterFreq), audioCtx.currentTime, 0.1);
+            } else if (!isMobile && audioInit && audioCtx.state === 'running') {
+                if (waterFilter && waterSource) {
+                    let waveCycle = Math.sin(now * 0.0003 * engineConfig.energy);
+                    let targetWaterFreq = 250 + (waveCycle * 100) + (engineConfig.height * 600);
+                    
+                    waterFilter.frequency.value = Math.max(150, targetWaterFreq);
+
                     let targetRate = 0.4 + (engineConfig.energy * 0.02) + (waveCycle * 0.03);
-                    waterSource.playbackRate.setTargetAtTime(Math.max(0.1, targetRate), audioCtx.currentTime, 0.1);
-                    let waterVol = 0.12 + currentDayFactor * 0.08;
-                    waterGain.gain.setTargetAtTime(waterVol, audioCtx.currentTime, 0.3);
-                }
-                if (windFilter && windGain) {
-                    let windFreq = 600 + currentDayFactor * 600 + sunsetFactor * 400;
-                    windFilter.frequency.setTargetAtTime(windFreq, audioCtx.currentTime, 0.3);
-                    let windVol = 0.03 + currentDayFactor * 0.05 + sunsetFactor * 0.04;
-                    windGain.gain.setTargetAtTime(windVol, audioCtx.currentTime, 0.3);
-                }
-                if (ambientFilter && ambientGain) {
-                    let ambientFreq = 1500 + currentDayFactor * 1000 - currentNightFactor * 500;
-                    ambientFilter.frequency.setTargetAtTime(ambientFreq, audioCtx.currentTime, 0.5);
-                    let ambientVol = 0.03 + currentDayFactor * 0.03 + sunsetFactor * 0.04;
-                    ambientGain.gain.setTargetAtTime(ambientVol, audioCtx.currentTime, 0.3);
-                }
-                if (nightFilter && nightGain) {
-                    let nightVol = currentNightFactor * 0.12;
-                    nightGain.gain.setTargetAtTime(nightVol, audioCtx.currentTime, 0.5);
-                    let nightFreq = 300 + Math.abs(mY) * 150;
-                    nightFilter.frequency.setTargetAtTime(nightFreq, audioCtx.currentTime, 0.3);
-                }
-                if (droneGain) {
-                    let droneVol = 0.02 + currentNightFactor * 0.04 + sunsetFactor * 0.02;
-                    droneGain.gain.setTargetAtTime(droneVol, audioCtx.currentTime, 0.5);
+                    waterSource.playbackRate.value = Math.max(0.1, targetRate);
                 }
             }
 
-            // WARMUP
-            let startupFactor = Math.max(0.0, 1.0 - (totalFrames / 120.0));
-            
-            // DYNAMIC TOUCH QUALITY SCALING: Heavily reduces GPU load instantly on swipe for 60fps interaction
-            let activeQuality = globalQuality;
-            if (isMobile && isTouching) activeQuality *= 0.6;
-
             gl.useProgram(prg);
+
             gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-            gl.uniform1f(uLocs.time, logicalTime * 0.001);
+            gl.uniform1f(uLocs.time, now * 0.001);
             gl.uniform2f(uLocs.mouse, mX, mY);
             gl.uniform1f(uLocs.warp, warp);
-            gl.uniform1f(uLocs.wTime, waveTime);
+
             gl.uniform3f(uLocs.wColor, engineConfig.r, engineConfig.g, engineConfig.b);
             gl.uniform1f(uLocs.wEnergy, engineConfig.energy);
             gl.uniform1f(uLocs.wHeight, engineConfig.height);
             gl.uniform1f(uLocs.sDensity, engineConfig.stars);
-            gl.uniform1f(uLocs.quality, activeQuality);
-            gl.uniform1f(uLocs.warmup, startupFactor);
-            gl.uniform1f(uLocs.detailFade, detailFade);
 
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
+
+        if (initGL()) { requestAnimationFrame(render); }
 
         window.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
@@ -1537,13 +1094,18 @@ void main() {
             }
         });
 
-        document.getElementById('auth-input').addEventListener('keydown', (e) => {
+        document.getElementById('auth-input').addEventListener('keydown', async (e) => {
             if (e.key === 'Enter') {
                 const val = e.target.value.trim();
-                if (val === 'abcab123') {
+                
+                const msgBuffer = new TextEncoder().encode(val);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+                if (hashHex === '3057e9b04f32c9497e7f62c5db4d93bd579997184282563f10111f1de43c3325') {
                     document.getElementById('auth-modal').style.display = 'none';
                     document.getElementById('custom-panel').style.display = 'flex';
-                    e.target.value = '';
                 } else {
                     e.target.style.color = '#ff4444';
                     setTimeout(() => e.target.style.color = '#fff', 600);
@@ -1553,16 +1115,10 @@ void main() {
 
         configKeys.forEach(k => {
             document.getElementById(`inp-${k}`).addEventListener('input', (e) => {
+                lastTouchTime = Date.now(); 
                 const val = parseFloat(e.target.value);
                 document.getElementById(`val-${k}`).innerText = val.toFixed(k === 'stars' ? 0 : 2);
                 engineConfig[k] = val;
-                try { localStorage.setItem('rahatil_engine_config', JSON.stringify(engineConfig)); } catch (err) { }
-            });
-        });
-
-        textKeys.forEach(k => {
-            document.getElementById(`inp-${k}`).addEventListener('input', (e) => {
-                engineConfig[k] = e.target.value; applyTextConfig();
                 try { localStorage.setItem('rahatil_engine_config', JSON.stringify(engineConfig)); } catch (err) { }
             });
         });
@@ -1573,7 +1129,10 @@ void main() {
             syncUIWithConfig();
         }
 
-        function closeAdminPanel() { document.getElementById('custom-panel').style.display = 'none'; }
+        function closeAdminPanel() {
+            document.getElementById('custom-panel').style.display = 'none';
+        }
+
     </script>
 </body>
 
