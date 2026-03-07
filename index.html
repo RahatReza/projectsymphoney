@@ -894,18 +894,17 @@ void main() {
         let isPaused = false;
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-        // --- TRUE DRS+ STATE MACHINE ---
-        let drsTier = isMobile ? 3 : 4; // Start Mobile at High (3), Desktop at Ultra (4)
+        // --- TRUE UNIFIED DRS+ STATE MACHINE ---
+        let drsTier = isMobile ? 3 : 4; 
         let drsCooldown = 0;
         let frameTimes = [];
         let fpsHistory =[];
+        window.mobileThermalLock = false; // Prevents "ping-ponging" on budget devices
         
         let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.2) : Math.min(window.devicePixelRatio, 2.0);
         let minDPR = isMobile ? 0.5 : 1.0;
         let currentDPR = drsTier === 4 ? baseDPR : (drsTier === 3 ? Math.max(minDPR, baseDPR * 0.85) : minDPR); 
-        let lastTime = 0;
-        let totalFrames = 0;
-        let globalQuality = 1.0;
+        let lastTime = performance.now();
 
         const configKeys =['energy', 'height', 'stars', 'r', 'g', 'b'];
         const textKeys =['mainTitle', 'btnText', 'cineTitle', 'cineSub1', 'cineSub2', 'targetUrl'];
@@ -1124,12 +1123,17 @@ void main() {
         });
 
         function applyDRSTier() {
-            if (drsTier === 4) currentDPR = baseDPR;
-            else if (drsTier === 3) currentDPR = Math.max(minDPR, baseDPR * 0.85);
-            else if (drsTier === 2) currentDPR = Math.max(minDPR, baseDPR * 0.7);
-            else currentDPR = minDPR;
+            let newDPR = currentDPR;
+            if (drsTier === 4) newDPR = baseDPR;
+            else if (drsTier === 3) newDPR = Math.max(minDPR, baseDPR * 0.85);
+            else if (drsTier === 2) newDPR = Math.max(minDPR, baseDPR * 0.7);
+            else newDPR = minDPR;
             
-            resizeCanvas();
+            // ANTI-STUTTER GATING: Only force a heavy canvas context resize if the resolution mathematically changes.
+            if (Math.abs(newDPR - currentDPR) > 0.01) {
+                currentDPR = newDPR;
+                resizeCanvas();
+            }
         }
 
         function resizeCanvas() {
@@ -1246,16 +1250,14 @@ void main() {
         function render(now) {
             animFrameId = requestAnimationFrame(render);
             if (isPaused || !gl) return;
-            totalFrames++;
 
+            // DELTA-TIME SANITIZER: Prevent tab switching or backgrounding from corrupting the telemetry logic
             let elapsed = now - (lastTime || now);
+            if (elapsed > 100) elapsed = 16.666; 
             lastTime = now;
 
-            let dtJS = Math.min(elapsed, 50);
-            
-            // PRINCIPLE 6: Optional Animation Tick Throttling
-            // If DRS has collapsed to Tier 0 (Potato), slow down execution time to mask heavy frame drops
-            if (drsTier === 0) dtJS *= 0.5; 
+            let dtJS = elapsed;
+            if (drsTier === 0) dtJS *= 0.5; // Throttle time speed to mask severe frame loss on Potato tier
 
             lastTimeJS = now; waveTime += (dtJS * 0.001) * engineConfig.energy;
             let dtFactor = dtJS / 16.666;
@@ -1268,9 +1270,9 @@ void main() {
             let targetFade = isTouching ? 0.0 : 1.0;
             detailFade += (targetFade - detailFade) * (0.15 * dtFactor);
 
-            // --- TRUE DRS+ SUSTAINED LOAD DETECTION ---
+            // --- UNIFIED DRS+ SUSTAINED LOAD DETECTION ---
             frameTimes.push(elapsed);
-            if (frameTimes.length >= 30 && !isTouching) { // Lockout scaler during touch input
+            if (frameTimes.length >= 30 && !isTouching) { // Lockout scaler during touch to prevent input lag
                 let sum = 0; for(let i=0; i<30; i++) sum+=frameTimes[i];
                 let avg = sum / 30;
                 let fps = 1000 / avg;
@@ -1285,10 +1287,11 @@ void main() {
                     
                     if (sustainedFps < 48 && drsTier > 0) {
                         drsTier--;
-                        drsCooldown = 6; // ~3 second lockout before dropping again
-                    } else if (sustainedFps >= 58 && drsTier < 4) {
+                        drsCooldown = 15; // Block re-checks for ~7.5 seconds
+                        if (isMobile) window.mobileThermalLock = true; // Engage one-way ratchet
+                    } else if (sustainedFps >= 58 && drsTier < 4 && !window.mobileThermalLock) {
                         drsTier++;
-                        drsCooldown = 8; // Harder to climb back up to prevent ping-ponging
+                        drsCooldown = 30; // Block re-checks for ~15 seconds to prevent ping-ponging
                     }
                     
                     if (oldTier !== drsTier) {
@@ -1356,6 +1359,7 @@ void main() {
                 }
             }
 
+            if (!isTouching) totalFrames++;
             let startupFactor = Math.max(0.0, 1.0 - ((totalFrames || 1) / 120.0));
 
             gl.useProgram(prg);
@@ -1368,11 +1372,10 @@ void main() {
             gl.uniform1f(uLocs.wEnergy, engineConfig.energy);
             gl.uniform1f(uLocs.wHeight, engineConfig.height);
             gl.uniform1f(uLocs.sDensity, engineConfig.stars);
-            gl.uniform1f(uLocs.quality, globalQuality);
             gl.uniform1f(uLocs.isMobile, isMobile ? 1.0 : 0.0);
             gl.uniform1f(uLocs.warmup, startupFactor);
             gl.uniform1f(uLocs.detailFade, detailFade);
-            gl.uniform1f(uLocs.drsTier, drsTier); // Push active Tier to Engine
+            gl.uniform1f(uLocs.drsTier, drsTier);
 
             gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         }
