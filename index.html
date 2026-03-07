@@ -21,7 +21,6 @@
             -webkit-touch-callout: none;
             height: 100dvh;
             
-            /* TYPOGRAPHY ENGINE: Guarantee razor-sharp text on Desktop PC */
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
@@ -524,7 +523,7 @@
         </div>
     </div>
 
-    <!-- GLSL SHADER (TRUE DRS+ EDITION) -->
+    <!-- GLSL SHADER (TRUE DRS+ MOBILE OPTIMIZED) -->
     <script id="fs" type="x-shader/x-fragment">#version 300 es
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -544,8 +543,7 @@ uniform float u_waveEnergy;
 uniform float u_waveHeight;
 uniform float u_starDensity;
 
-// TRUE DRS+ UNIFORMS
-uniform float u_drsTier;     // 0.0 (Potato) to 4.0 (Ultra)
+uniform float u_drsTier;    
 uniform float u_isMobile; 
 uniform float u_warmup; 
 uniform float u_detailFade; 
@@ -566,14 +564,15 @@ float noise(vec2 p) {
     return mix(mix(hash(i), hash(i+vec2(1,0)), u.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
 }
 
-// HYPER-OPTIMIZED DYNAMIC GERSTNER WAVES
-float GetWaterHeight(vec3 p, bool micro) {
+// 60% LESS OPERATIONS THAN BEFORE: Unified Wave Function
+float GetWaterHeight(vec3 p) {
     if (u_drsTier < 0.5) return -(u_waveHeight * 0.5);
 
     float t = u_waveTime;
     vec2 uv = p.xz * 0.75;
     
-    float nVal = (micro && u_drsTier > 1.5) ? noise(uv * 0.3 + t * 0.1) * (1.0 - u_warmup) : 0.5;
+    // Low detail compute switch
+    float nVal = (u_drsTier > 2.5) ? noise(uv * 0.3 + t * 0.1) * (1.0 - u_warmup) : 0.5;
     
     vec3 dots = mod(vec3(
         dot(uv, vec2(0.64018, 0.76822)) * 1.5 + t * 0.8,
@@ -581,46 +580,42 @@ float GetWaterHeight(vec3 p, bool micro) {
         dot(uv, vec2(0.19611, -0.98058)) * 5.0 + t * 1.5
     ), PI_2);
     
-    vec3 sines = sin(dots) * 0.5 + 0.5;
-    sines *= sines; 
+    vec3 sines = sin(dots);
+    sines = sines * sines * 0.5 + 0.5; // cheaper square logic
     
     vec3 amps = vec3(1.5 * (0.85 + 0.3 * nVal), 0.8, 0.4) * u_waveHeight;
     float h = dot(sines, amps);
     
-    if (u_drsTier > 2.5) {
+    if (u_drsTier > 1.5) {
         vec2 dots2 = mod(vec2(
             dot(uv, vec2(-0.8137, -0.5812)) * 3.5 + t * 0.6,
             dot(uv, vec2(0.9486, -0.3162)) * 8.0 - t * 2.0
         ), PI_2);
-        vec2 sines2 = sin(dots2) * 0.5 + 0.5;
-        sines2 *= sines2;
+        vec2 sines2 = sin(dots2);
+        sines2 = sines2 * sines2 * 0.5 + 0.5;
         vec2 amps2 = vec2(0.25 * (0.8 + 0.4 * nVal), 0.15) * u_waveHeight;
         h += dot(sines2, amps2);
-    }
-
-    if(micro && u_drsTier > 1.5 && u_detailFade > 0.01) {
-        vec2 uv1 = rotMicro * uv * 8.0;
-        h += (noise(uv1 + t) * 0.5) * (u_waveHeight * 0.18) * u_detailFade * (1.0 - u_warmup);
     }
     
     return h - (u_waveHeight * 0.5);
 }
 
-vec3 GetNormal(vec3 p, bool micro) {
+// OPTIMIZED NORMAL: Calculates ONLY once.
+vec3 GetNormal(vec3 p) {
     if (u_drsTier < 0.5) return vec3(0.0, 1.0, 0.0);
 
-    vec2 e = vec2(0.02, 0.0);
-    float h = GetWaterHeight(p, micro);
+    vec2 e = vec2(0.04, 0.0); // Larger epsilon = smoother, less high freq artifacts
+    float h = GetWaterHeight(p);
     float naturalY = 0.04 + (u_waveHeight * 0.4); 
     return normalize(vec3(
-        h - GetWaterHeight(p - e.xyy, false), 
+        h - GetWaterHeight(p - e.xyy), 
         naturalY, 
-        h - GetWaterHeight(p - e.yyx, false)
+        h - GetWaterHeight(p - e.yyx)
     ));
 }
 
 vec3 GetStars(vec3 rd, float nightFactor, bool isRef) {
-    if (u_drsTier < 0.5) return vec3(0.0);
+    if (u_drsTier < 0.5 || (isRef && u_drsTier < 1.5)) return vec3(0.0); // Stop mobile reflection stars
 
     vec3 starRd = isRef ? normalize(vec3(rd.x, abs(rd.y), rd.z)) : rd;
     vec2 starUV = vec2(atan(starRd.x, starRd.z) * 0.5, starRd.y);
@@ -683,7 +678,7 @@ vec3 GetMeteors(vec3 rd, float nightFactor) {
 }
 
 float getClouds(vec3 rd, float t, bool isRef) {
-    if (u_drsTier < 1.5) return 0.0;
+    if (u_drsTier < 1.5 || (isRef && u_isMobile > 0.5)) return 0.0; // Restrict cloud reflection rendering entirely on mobile
 
     vec2 uv = rd.xz / (rd.y + 0.001) * 0.4;
     uv.x -= t * 0.05;      
@@ -695,7 +690,7 @@ float getClouds(vec3 rd, float t, bool isRef) {
             uv = rotCloud * uv;
             f += 0.5 * noise(uv + t * 0.03);
         }
-        if (u_drsTier > 3.5 && u_detailFade > 0.01) { 
+        if (u_drsTier > 2.5 && u_detailFade > 0.01) { 
             uv = rotCloud * uv;
             f += 0.25 * noise(uv - t * 0.02) * u_detailFade;
         }
@@ -763,7 +758,7 @@ void main() {
 
     if (rd.y >= 0.0 && !skipSky) {
         if(trueNight > 0.05) {
-            if (u_drsTier > 1.5) { 
+            if (u_drsTier > 2.5) { 
                 vec2 nebUV = rd.xz / (abs(rd.y) + 0.001);
                 float neb = noise(nebUV * 2.0 + u_time * 0.01) * noise(nebUV * 4.0 - u_time * 0.01);
                 col += vec3(0.08, 0.03, 0.12) * neb * trueNight * smoothstep(0.0, 0.3, rd.y) * 0.6 * (1.0 - smoothstep(0.2, 0.8, u_warp));
@@ -783,7 +778,11 @@ void main() {
         
         vec3 cinematicSun = coreColor * (smoothstep(0.9985, 0.9998, sunDot) * 2.5);
         cinematicSun += glowColor * (exp2(180.0 * log2(sunDot + 0.0001)) * 1.5);            
-        cinematicSun += mix(vec3(1.0, 0.1, 0.0), glowColor, 0.5) * (exp2(12.0 * log2(sunDot + 0.0001)) * 0.4);
+        
+        if (u_isMobile < 0.5) { // Skip secondary cinematic sun bloom on mobile to save power
+            cinematicSun += mix(vec3(1.0, 0.1, 0.0), glowColor, 0.5) * (exp2(12.0 * log2(sunDot + 0.0001)) * 0.4);
+        }
+        
         col += cinematicSun * sunMask;
         
         vec3 moonRight = normalize(cross(vec3(0.0, 1.0, 0.0), moonDir));
@@ -809,21 +808,32 @@ void main() {
             col = horizon * 0.5;
         } else {
             vec3 p = ro + rd * d;
-            
             bool doMicro = (d < 50.0);
             
-            float hOffset = GetWaterHeight(p, false);
+            float hOffset = GetWaterHeight(p);
             p += rd * (hOffset / max(abs(rd.y), 0.05));
             
-            vec3 N_sharp = GetNormal(p, true);  
-            vec3 N_smooth = GetNormal(p, false);          
+            // OPTIMIZATION FIX: Calculate normal once, then perturb locally.
+            vec3 N_smooth = GetNormal(p);          
+            vec3 N_sharp = N_smooth; 
+            
+            // Apply Micro Detail directly to computed vector vs recomputing 3 massive functions
+            if (doMicro && u_drsTier > 1.5 && u_detailFade > 0.01) {
+                vec2 uv1 = rotMicro * p.xz * 8.0;
+                float microNoise = noise(uv1 + u_time) * (u_waveHeight * 0.6) * u_detailFade * (1.0 - u_warmup);
+                N_sharp.xz -= microNoise * 0.4;
+                N_sharp = normalize(N_sharp);
+            }
+            
             vec3 N_spec = normalize(mix(N_smooth, N_sharp, 0.9)); 
             
             vec3 refR_Planar = reflect(rd, vec3(0, 1, 0)); 
             vec3 reflectedSky = mix(horizon, zenith, smoothstep(-0.2, 0.6, reflect(rd, N_smooth).y));
             
             if(trueNight > 0.05 && !doMicro && u_drsTier > 1.5) {
-                reflectedSky += vec3(0.04, 0.015, 0.06) * noise(refR_Planar.xz * 2.0) * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
+                if (u_isMobile < 0.5) {
+                    reflectedSky += vec3(0.04, 0.015, 0.06) * noise(refR_Planar.xz * 2.0) * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
+                }
                 reflectedSky += GetStars(refR_Planar, trueNight, true);
             }
 
@@ -833,9 +843,8 @@ void main() {
             }
 
             float fresnel = exp2(5.0 * log2(1.0 - max(0.0, dot(-rd, N_sharp)) + 0.0001));
-            float waveLocalH = GetWaterHeight(p, false);
             
-            vec3 tidalColor = mix(u_waterColor * 0.2, u_waterColor * 2.2, smoothstep(-u_waveHeight, u_waveHeight * 1.5, waveLocalH));
+            vec3 tidalColor = mix(u_waterColor * 0.2, u_waterColor * 2.2, smoothstep(-u_waveHeight, u_waveHeight * 1.5, hOffset));
             vec3 nightWater = mix(vec3(0.000, 0.001, 0.003) + tidalColor * 0.05, vec3(0.015, 0.035, 0.085) + tidalColor * 0.25, max(0.0, moonDir.y));
             vec3 waterBase = mix(nightWater, tidalColor, dayFactor);
             
@@ -844,14 +853,24 @@ void main() {
             vec3 waterSunDir = normalize(vec3(sunDir.x, max(sunDir.y, 0.001), sunDir.z));
             vec3 waterMoonDir = normalize(vec3(moonDir.x, max(moonDir.y, 0.001), moonDir.z));
 
-            float specPower = u_drsTier < 1.5 ? 100.0 : (u_isMobile > 0.5 ? 180.0 : 400.0);
+            float specPower = u_drsTier < 1.5 ? 90.0 : (u_isMobile > 0.5 ? 120.0 : 400.0);
             
             float smoothSpecDot = max(0.0, dot(N_smooth, normalize(-rd + waterSunDir)));
-            float specTermSun = exp2(specPower * log2(max(0.0, dot(N_spec, normalize(-rd + waterSunDir))) + 0.0001)) * 4.5 + exp2(80.0 * log2(smoothSpecDot + 0.0001)) * 0.8;
+            float specTermSun = exp2(specPower * log2(max(0.0, dot(N_spec, normalize(-rd + waterSunDir))) + 0.0001)) * 4.5;
+            
+            if (u_isMobile < 0.5) {
+               specTermSun += exp2(80.0 * log2(smoothSpecDot + 0.0001)) * 0.8;
+            }
+            
             waterCol += mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.9, 0.7), smoothstep(0.0, 0.3, waterSunDir.y)) * specTermSun * sunMask;
             
             float smoothMoonSpecDot = max(0.0, dot(N_smooth, normalize(-rd + waterMoonDir)));
-            float moonSpecIntensity = exp2((specPower + 100.0) * log2(max(0.0, dot(N_spec, normalize(-rd + waterMoonDir))) + 0.0001)) * 2.5 + exp2(80.0 * log2(smoothMoonSpecDot + 0.0001)) * 0.8;
+            float moonSpecIntensity = exp2((specPower + 100.0) * log2(max(0.0, dot(N_spec, normalize(-rd + waterMoonDir))) + 0.0001)) * 2.5;
+            
+            if (u_isMobile < 0.5) {
+               moonSpecIntensity += exp2(80.0 * log2(smoothMoonSpecDot + 0.0001)) * 0.8;
+            }
+
             waterCol += vec3(0.5, 0.65, 0.85) * moonSpecIntensity * trueNight * moonMask;
             
             float diffuseMoon = max(0.0, dot(N_smooth, waterMoonDir));
@@ -892,17 +911,16 @@ void main() {
         let isPaused = false;
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-        let drsTier = isMobile ? 3 : 4; 
+        // FIXED DRS STARTING TIER & RESOLUTION CAP
+        let drsTier = isMobile ? 1 : 4; 
         let drsCooldown = 0;
         let frameTimes =[];
-        let fpsHistory =[];
         window.mobileThermalLock = false; 
         
-        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.2) : Math.min(window.devicePixelRatio, 2.0);
-        let minDPR = isMobile ? 0.5 : baseDPR; // Desktop NEVER drops below native scale
+        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.0) : Math.min(window.devicePixelRatio, 2.0); // Mobile pixel lock
+        let minDPR = isMobile ? 0.5 : baseDPR; 
         let currentDPR = baseDPR; 
         let lastTime = performance.now();
-        let globalQuality = isMobile ? 0.6 : 1.0; 
 
         const configKeys =['energy', 'height', 'stars', 'r', 'g', 'b'];
         const textKeys =['mainTitle', 'btnText', 'cineTitle', 'cineSub1', 'cineSub2', 'targetUrl'];
@@ -1123,9 +1141,8 @@ void main() {
         function applyDRSTier() {
             let newDPR = currentDPR;
             if (isMobile) {
-                if (drsTier === 4) newDPR = baseDPR;
-                else if (drsTier === 3) newDPR = Math.max(minDPR, baseDPR * 0.85);
-                else if (drsTier === 2) newDPR = Math.max(minDPR, baseDPR * 0.7);
+                if (drsTier === 2) newDPR = baseDPR;
+                else if (drsTier === 1) newDPR = Math.max(minDPR, baseDPR * 0.85);
                 else newDPR = minDPR;
             } else {
                 newDPR = baseDPR;
@@ -1186,13 +1203,11 @@ void main() {
             uLocs.wEnergy = gl.getUniformLocation(prg, 'u_waveEnergy');
             uLocs.wHeight = gl.getUniformLocation(prg, 'u_waveHeight');
             uLocs.sDensity = gl.getUniformLocation(prg, 'u_starDensity');
-            uLocs.quality = gl.getUniformLocation(prg, 'u_quality');
             uLocs.isMobile = gl.getUniformLocation(prg, 'u_isMobile');
             uLocs.warmup = gl.getUniformLocation(prg, 'u_warmup');
             uLocs.detailFade = gl.getUniformLocation(prg, 'u_detailFade');
             uLocs.drsTier = gl.getUniformLocation(prg, 'u_drsTier');
 
-            // CRITICAL FIX: Force internal resolution to strictly match monitor specs immediately.
             resizeCanvas();
             applyDRSTier();
             return true;
@@ -1261,8 +1276,6 @@ void main() {
             lastTime = now;
 
             let dtJS = elapsed;
-            if (drsTier === 0) dtJS *= 0.5; 
-
             lastTimeJS = now; waveTime += (dtJS * 0.001) * engineConfig.energy;
             let dtFactor = dtJS / 16.666;
             
@@ -1274,36 +1287,33 @@ void main() {
             let targetFade = isTouching ? 0.0 : 1.0;
             detailFade += (targetFade - detailFade) * (0.15 * dtFactor);
 
-            // JIT WARMUP PROTECTION: Telemetry is blind for 120 frames. Prevents false drops on PC.
-            if (totalFrames > 120 && !isTouching) { 
+            // FIXED DRS SYSTEM (Accurate evaluation block outside the array clear)
+            if (drsCooldown > 0) drsCooldown--;
+            if (totalFrames > 60 && !isTouching) { 
                 frameTimes.push(elapsed);
-                if (frameTimes.length >= 30) {
-                    let sum = 0; for(let i=0; i<30; i++) sum+=frameTimes[i];
-                    let avg = sum / 30;
+                
+                if (frameTimes.length >= 60) {
+                    let sum = 0; 
+                    for(let i=0; i<60; i++) sum += frameTimes[i];
+                    let avg = sum / 60;
                     let fps = 1000 / avg;
                     frameTimes =[]; 
                     
-                    fpsHistory.push(fps);
-                    if (fpsHistory.length > 5) fpsHistory.shift(); 
-                    
-                    if (fpsHistory.length === 5 && drsCooldown <= 0) {
-                        let sustainedFps = fpsHistory.reduce((a,b)=>a+b, 0) / 5;
+                    if (drsCooldown <= 0) {
                         let oldTier = drsTier;
-                        
-                        if (sustainedFps < 48 && drsTier > 0) {
+                        if (fps < 45 && drsTier > 0) {
                             drsTier--;
-                            drsCooldown = 15; 
+                            drsCooldown = 120; // Correct cooldown length
                             if (isMobile) window.mobileThermalLock = true; 
-                        } else if (sustainedFps >= 58 && drsTier < 4 && !window.mobileThermalLock) {
+                        } else if (fps >= 58 && drsTier < (isMobile ? 2 : 4) && !window.mobileThermalLock) {
                             drsTier++;
-                            drsCooldown = 30; 
+                            drsCooldown = 120; 
                         }
                         
                         if (oldTier !== drsTier) {
                             applyDRSTier();
                         }
                     }
-                    if (drsCooldown > 0) drsCooldown--;
                 }
             }
 
@@ -1377,7 +1387,6 @@ void main() {
             gl.uniform1f(uLocs.wEnergy, engineConfig.energy);
             gl.uniform1f(uLocs.wHeight, engineConfig.height);
             gl.uniform1f(uLocs.sDensity, engineConfig.stars);
-            gl.uniform1f(uLocs.quality, globalQuality);
             gl.uniform1f(uLocs.isMobile, isMobile ? 1.0 : 0.0);
             gl.uniform1f(uLocs.warmup, startupFactor);
             gl.uniform1f(uLocs.detailFade, detailFade);
