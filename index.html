@@ -185,6 +185,19 @@
             mix-blend-mode: difference; transition: transform 0.2s ease;
         }
 
+        /* TELEMETRY OVERLAY */
+        #telemetry-layer {
+            position: fixed; top: 15px; right: 15px; z-index: 10000;
+            background: rgba(10, 10, 15, 0.85); border: 1px solid rgba(160, 235, 255, 0.2);
+            border-radius: 6px; padding: 15px; color: #fff; font-family: monospace; font-size: 0.65rem;
+            display: none; flex-direction: column; gap: 8px; backdrop-filter: blur(10px);
+            pointer-events: none; text-transform: uppercase; letter-spacing: 1px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5); transition: opacity 0.3s;
+        }
+        .tel-row { display: flex; justify-content: space-between; gap: 25px; }
+        .tel-lbl { color: #888; }
+        .tel-val { color: #a0ebff; font-weight: bold; text-align: right;}
+
         .overlay-layer {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9000;
             display: none; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.6);
@@ -254,6 +267,16 @@
 <body>
     <div id="cursor"></div>
     <canvas id="v"></canvas>
+
+    <div id="telemetry-layer">
+        <div class="tel-row"><span class="tel-lbl">ENGINE</span><span class="tel-val">TIDAL CORE</span></div>
+        <div class="tel-row"><span class="tel-lbl">THREAD</span><span class="tel-val" id="tel-renderer">W-WORKER</span></div>
+        <div class="tel-row"><span class="tel-lbl">FPS</span><span class="tel-val" id="tel-fps">00</span></div>
+        <div class="tel-row"><span class="tel-lbl">LATENCY</span><span class="tel-val" id="tel-lat">0.0ms</span></div>
+        <div class="tel-row"><span class="tel-lbl">FBO RES</span><span class="tel-val" id="tel-res">0x0</span></div>
+        <div class="tel-row"><span class="tel-lbl">HDR BLOOM</span><span class="tel-val" id="tel-hdr">OFF</span></div>
+        <div class="tel-row"><span class="tel-lbl">DRS TIER</span><span class="tel-val" id="tel-drs">T4</span></div>
+    </div>
 
     <div id="intro-layer" onclick="window.enterExperience()">
         <div class="intro-visual"></div>
@@ -604,9 +627,10 @@ void main() {
     }
 
     if(rd.y < 0.0) {
-        float d = -(ro.y) / min(rd.y, -0.002); 
-        if (d > 150.0) {
-            col = horizon * 0.5;
+        float d = -(ro.y) / min(rd.y, -0.001); 
+        
+        if (d > 250.0) {
+            col = mix(horizon, vec3(0.0), trueNight * 0.3);
         } else {
             vec3 p = ro + rd * d;
             bool doMicro = (d < 50.0);
@@ -648,24 +672,37 @@ void main() {
             vec3 waterSunDir = normalize(vec3(sunDir.x, max(sunDir.y, 0.001), sunDir.z));
             vec3 waterMoonDir = normalize(vec3(moonDir.x, max(moonDir.y, 0.001), moonDir.z));
 
-            float specPower = u_drsTier < 1.5 ? 100.0 : (u_isMobile > 0.5 ? 180.0 : 400.0);
+            // FIX: Calibrated physical Specular response to prevent mobile wash-out
+            float specPower = u_drsTier < 1.5 ? 150.0 : (u_isMobile > 0.5 ? 250.0 : 400.0);
+            float sunSpecMult = u_isMobile > 0.5 ? 1.2 : 4.5;
+            float moonSpecMult = u_isMobile > 0.5 ? 0.8 : 2.5;
+            float smoothSpecMult = u_isMobile > 0.5 ? 0.2 : 0.8;
+
             float smoothSpecDot = max(0.0, dot(N_smooth, normalize(-rd + waterSunDir)));
-            float specTermSun = exp2(specPower * log2(max(0.0, dot(N_spec, normalize(-rd + waterSunDir))) + 0.0001)) * 4.5 + exp2(80.0 * log2(smoothSpecDot + 0.0001)) * 0.8;
+            float specTermSun = exp2(specPower * log2(max(0.0, dot(N_spec, normalize(-rd + waterSunDir))) + 0.0001)) * sunSpecMult + exp2(80.0 * log2(smoothSpecDot + 0.0001)) * smoothSpecMult;
             waterCol += mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.9, 0.7), smoothstep(0.0, 0.3, waterSunDir.y)) * specTermSun * sunMask;
+            
             float smoothMoonSpecDot = max(0.0, dot(N_smooth, normalize(-rd + waterMoonDir)));
-            float moonSpecIntensity = exp2((specPower + 100.0) * log2(max(0.0, dot(N_spec, normalize(-rd + waterMoonDir))) + 0.0001)) * 2.5 + exp2(80.0 * log2(smoothMoonSpecDot + 0.0001)) * 0.8;
+            float moonSpecIntensity = exp2((specPower + 100.0) * log2(max(0.0, dot(N_spec, normalize(-rd + waterMoonDir))) + 0.0001)) * moonSpecMult + exp2(80.0 * log2(smoothMoonSpecDot + 0.0001)) * smoothSpecMult;
             waterCol += vec3(0.5, 0.65, 0.85) * moonSpecIntensity * trueNight * moonMask;
+            
             float diffuseMoon = max(0.0, dot(N_smooth, waterMoonDir));
             waterCol += (vec3(0.02, 0.028, 0.05) + tidalColor * 0.15) * (diffuseMoon * 0.4) * trueNight;
-            col = mix(mix(horizon, waterCol, smoothstep(180.0, 5.0, d)), horizon * 0.5, smoothstep(30.0, 150.0, d) * trueNight * 0.6);
+            
+            // FIX: Perfect atmospheric mist integration eliminating the sharp "toy line" horizon
+            float mistFade = smoothstep(60.0, 250.0, d);
+            vec3 mistColor = mix(horizon, vec3(0.0), trueNight * 0.3);
+            col = mix(waterCol, mistColor, mistFade);
         }
     }
 
     if (u_drsTier > 0.5) { 
-        col += vec3(0.85, 0.95, 1.0) * pow(u_warp, 3.5) * 2.5;
+        float hyperGlow = pow(u_warp, 3.5) * 2.5;
+        float caSplit = u_warp * length(uv) * 1.5;
+        // RESTORED: Raw stylistic warp RGB chromatic aberration
+        col += vec3(0.85, 0.95, 1.0) * hyperGlow + vec3(caSplit, 0.0, -caSplit) * u_warp * 1.5;
     }
 
-    // RAW HDR OUT (Tone Mapping occurs in Post-Process Composite Pass)
     fragColor = vec4(col, 1.0);
 }</script>
 
@@ -678,8 +715,9 @@ void main() {
             
             // Framebuffer Render Targets
             let rtMain, rtBlurH, rtBlurV;
+            let hasFloat = false, bloomThresh = 1.0;
             
-            // BUGFIX: Guarantee memory allocation before requestAnimationFrame executes
+            // Critical Pre-Allocation ensuring no undefined pointers on first frame
             let activeRipples = Array(4).fill().map(() => ({ x: 0, z: 0, time: -100 }));
             
             // State
@@ -687,9 +725,9 @@ void main() {
             let warp = 0, waveTime = 0, detailFade = 1.0;
             let isW = false, isTouching = false, isMobile = false;
             let engineConfig = {};
-            let totalFrames = 0, lastTime = 0, isPaused = false;
+            let totalFrames = 0, lastTime = performance.now(), isPaused = false;
             
-            // DRS State
+            // DRS & Telemetry State
             let drsTier = 4, drsCooldown = 0, drsIndex = 0, drsCount = 0, drsSum = 0;
             const DRS_HISTORY_SIZE = 60;
             const frameTimes = new Float32Array(DRS_HISTORY_SIZE);
@@ -701,11 +739,11 @@ void main() {
                 return sh;
             }
 
-            function createRenderTarget(w, h, hasFloat) {
+            function createRenderTarget(w, h, useFloat) {
                 const tex = gl.createTexture();
                 gl.bindTexture(gl.TEXTURE_2D, tex);
-                const type = hasFloat ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE;
-                const internalFmt = hasFloat ? gl.RGBA16F : gl.RGBA;
+                const type = useFloat ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE;
+                const internalFmt = useFloat ? gl.RGBA16F : gl.RGBA;
                 gl.texImage2D(gl.TEXTURE_2D, 0, internalFmt, w, h, 0, gl.RGBA, type, null);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -719,12 +757,12 @@ void main() {
             }
 
             function resizeFBOs(w, h) {
+                if (w <= 0 || h <= 0) return;
                 if (rtMain) {
                     gl.deleteFramebuffer(rtMain.fb); gl.deleteTexture(rtMain.tex);
                     gl.deleteFramebuffer(rtBlurH.fb); gl.deleteTexture(rtBlurH.tex);
                     gl.deleteFramebuffer(rtBlurV.fb); gl.deleteTexture(rtBlurV.tex);
                 }
-                const hasFloat = !!gl.getExtension('EXT_color_buffer_float');
                 rtMain = createRenderTarget(w, h, hasFloat);
                 rtBlurH = createRenderTarget(w >> 1, h >> 1, hasFloat); // Fast Half-Res
                 rtBlurV = createRenderTarget(w >> 1, h >> 1, hasFloat);
@@ -773,6 +811,10 @@ void main() {
                 gl = canvas.getContext('webgl2', { antialias: false, powerPreference: "high-performance" });
                 if (!gl) return false;
                 
+                // Hardware fallback safety net for FLOAT buffers
+                hasFloat = !!(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'));
+                bloomThresh = hasFloat ? 1.0 : 0.85;
+
                 generateCloudLUT();
 
                 const vs = compile(gl.VERTEX_SHADER, '#version 300 es\nin vec4 p; out vec2 vUv; void main(){ vUv=p.xy*0.5+0.5; gl_Position=p; }');
@@ -784,7 +826,7 @@ void main() {
                 // BLUR PASS
                 prgBlur = gl.createProgram();
                 const fsBlur = `#version 300 es\nprecision highp float; in vec2 vUv; out vec4 fCol;
-                    uniform sampler2D tIn; uniform vec2 uDir; uniform float uFirst;
+                    uniform sampler2D tIn; uniform vec2 uDir; uniform float uFirst; uniform float uThresh;
                     void main(){
                         vec3 c=vec3(0.0);
                         c += texture(tIn, vUv - 4.0*uDir).rgb * 0.05; c += texture(tIn, vUv - 3.0*uDir).rgb * 0.09;
@@ -792,7 +834,7 @@ void main() {
                         c += texture(tIn, vUv).rgb * 0.18;
                         c += texture(tIn, vUv + 1.0*uDir).rgb * 0.15; c += texture(tIn, vUv + 2.0*uDir).rgb * 0.12;
                         c += texture(tIn, vUv + 3.0*uDir).rgb * 0.09; c += texture(tIn, vUv + 4.0*uDir).rgb * 0.05;
-                        if(uFirst > 0.5) { float l=dot(c,vec3(0.299,0.587,0.114)); c*=smoothstep(1.0, 2.0, l); }
+                        if(uFirst > 0.5) { float l=dot(c,vec3(0.299,0.587,0.114)); c*=smoothstep(uThresh, uThresh + 1.0, l); }
                         fCol=vec4(c,1.0);
                     }`;
                 gl.attachShader(prgBlur, vs); gl.attachShader(prgBlur, compile(gl.FRAGMENT_SHADER, fsBlur)); gl.linkProgram(prgBlur);
@@ -825,11 +867,12 @@ void main() {
                 for(let i=0; i<4; i++) uLocsRipples.push(gl.getUniformLocation(prg, `u_ripples[${i}]`));
 
                 uLocsBlur.tIn = gl.getUniformLocation(prgBlur, 'tIn'); uLocsBlur.uDir = gl.getUniformLocation(prgBlur, 'uDir');
-                uLocsBlur.uFirst = gl.getUniformLocation(prgBlur, 'uFirst');
+                uLocsBlur.uFirst = gl.getUniformLocation(prgBlur, 'uFirst'); uLocsBlur.uThresh = gl.getUniformLocation(prgBlur, 'uThresh');
                 
                 uLocsComp.tScene = gl.getUniformLocation(prgComp, 'tScene'); uLocsComp.tBloom = gl.getUniformLocation(prgComp, 'tBloom');
                 uLocsComp.uWarp = gl.getUniformLocation(prgComp, 'uWarp');
 
+                if (canvas.width > 0 && canvas.height > 0) resizeFBOs(canvas.width, canvas.height);
                 ctx.requestAnimationFrame(render);
             }
 
@@ -847,7 +890,8 @@ void main() {
             }
 
             function render(now) {
-                if (isPaused || !rtMain) { ctx.requestAnimationFrame(render); return; }
+                if (isPaused) { ctx.requestAnimationFrame(render); return; }
+                if (!rtMain) { ctx.requestAnimationFrame(render); return; } // Safely await resize
                 
                 totalFrames++; 
                 let elapsed = now - (lastTime || now);
@@ -874,6 +918,14 @@ void main() {
                         if (oldTier !== drsTier) { applyDRSTier(); drsCount = 0; drsSum = 0; }
                     }
                 }
+                
+                // TELEMETRY BROADCAST
+                if (totalFrames % 30 === 0) {
+                    let calcFps = Math.round(1000 / (drsSum / DRS_HISTORY_SIZE || 16.666));
+                    let calcLat = Math.round(elapsed * 10) / 10;
+                    ctx.postMessage({ type: 'TELEMETRY', fps: calcFps, latency: calcLat, w: rtMain.w, h: rtMain.h, drsTier, hdr: hasFloat });
+                }
+
                 if (isW) warp = Math.min(1.0, warp + (0.008 * dtFactor));
                 
                 // 1. MAIN PASS
@@ -896,7 +948,8 @@ void main() {
                 gl.viewport(0, 0, rtBlurH.w, rtBlurH.h);
                 gl.useProgram(prgBlur);
                 gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, rtMain.tex);
-                gl.uniform1i(uLocsBlur.tIn, 0); gl.uniform2f(uLocsBlur.uDir, 1.0/rtBlurH.w, 0.0); gl.uniform1f(uLocsBlur.uFirst, 1.0);
+                gl.uniform1i(uLocsBlur.tIn, 0); gl.uniform2f(uLocsBlur.uDir, 1.0/rtBlurH.w, 0.0); 
+                gl.uniform1f(uLocsBlur.uFirst, 1.0); gl.uniform1f(uLocsBlur.uThresh, bloomThresh);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
                 // 3. BLUR V
@@ -974,24 +1027,37 @@ void main() {
         const fsSource = document.getElementById('fs').textContent;
         let engine;
 
-        if (window.OffscreenCanvas && !/Firefox\/[1-5]\d\./.test(navigator.userAgent)) {
-            const blob = new Blob([`(${TidalEngineCore.toString()})()`], { type: 'application/javascript' });
-            engine = new Worker(URL.createObjectURL(blob));
-            const offscreen = canvasEl.transferControlToOffscreen();
-            engine.postMessage({ type: 'INIT', canvas: offscreen, isMobile, baseDPR, currentDPR, engineConfig, fsSource },[offscreen]);
-        } else {
-            engine = new MockWorker(TidalEngineCore);
-            engine.postMessage({ type: 'INIT', canvas: canvasEl, isMobile, baseDPR, currentDPR, engineConfig, fsSource });
-        }
-
-        engine.onmessage = (e) => {
-            if (e.data.type === 'DPR_CHANGE') {
-                currentDPR = e.data.dpr; triggerResize();
-            } else if (e.data.type === 'STATE') {
-                updateAudioLogic(e.data.mX, e.data.mY, e.data.waveTime, e.data.warp);
-                if (e.data.redirected && !redirected) { redirected = true; window.location.href = TARGET; }
+        function bootEngine() {
+            if (window.OffscreenCanvas && !/Firefox\/[1-5]\d\./.test(navigator.userAgent)) {
+                const blob = new Blob([`(${TidalEngineCore.toString()})()`], { type: 'application/javascript' });
+                engine = new Worker(URL.createObjectURL(blob));
+                const offscreen = canvasEl.transferControlToOffscreen();
+                engine.postMessage({ type: 'INIT', canvas: offscreen, isMobile, baseDPR, currentDPR, engineConfig, fsSource },[offscreen]);
+            } else {
+                engine = new MockWorker(TidalEngineCore);
+                engine.postMessage({ type: 'INIT', canvas: canvasEl, isMobile, baseDPR, currentDPR, engineConfig, fsSource });
             }
-        };
+
+            engine.onmessage = (e) => {
+                if (e.data.type === 'DPR_CHANGE') {
+                    currentDPR = e.data.dpr; triggerResize();
+                } else if (e.data.type === 'STATE') {
+                    updateAudioLogic(e.data.mX, e.data.mY, e.data.waveTime, e.data.warp);
+                    if (e.data.redirected && !redirected) { redirected = true; window.location.href = TARGET; }
+                } else if (e.data.type === 'TELEMETRY') {
+                    document.getElementById('tel-fps').innerText = e.data.fps;
+                    document.getElementById('tel-lat').innerText = e.data.latency + 'ms';
+                    document.getElementById('tel-res').innerText = e.data.w + 'x' + e.data.h;
+                    document.getElementById('tel-hdr').innerText = e.data.hdr ? 'ON (16F)' : 'OFF (8B)';
+                    document.getElementById('tel-drs').innerText = 'T' + e.data.drsTier;
+                }
+            };
+        }
+        bootEngine();
+
+        // Safe Context Loss Handling ensuring no crash regression on suspend
+        canvasEl.addEventListener("webglcontextlost", (e) => { e.preventDefault(); engine.postMessage({ type: 'PAUSE', paused: true }); }, false);
+        canvasEl.addEventListener("webglcontextrestored", () => { location.reload(); }, false);
 
         function triggerResize() { engine.postMessage({ type: 'RESIZE', w: window.innerWidth, h: window.innerHeight }); }
         window.addEventListener('resize', triggerResize);
@@ -1000,7 +1066,7 @@ void main() {
         function syncEngine() { engine.postMessage({ type: 'SYNC', mX, mY, isW, isTouching, ripples: activeRipples, engineConfig }); }
 
         // ----------------------------------------------------------------------
-        // AUDIO GRAPH (Zero regressions, identical integration)
+        // FULL AUDIO GRAPH & BELL RESTORATION
         // ----------------------------------------------------------------------
         let audioCtx, waterSource, waterFilter, waterGain, windSource, windFilter, windGain;
         let ambientSource, ambientFilter, ambientGain, nightSource, nightFilter, nightGain;
@@ -1012,6 +1078,7 @@ void main() {
             const bufferSize = Math.floor(audioCtx.sampleRate * 0.8);
             if (audioCtx.createStereoPanner) { try { masterPanner = audioCtx.createStereoPanner(); masterPanner.pan.value = 0; masterPanner.connect(audioCtx.destination); } catch(e){} }
             let audioDest = masterPanner ? masterPanner : audioCtx.destination;
+            
             setTimeout(() => {
                 const b = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); const o = b.getChannelData(0); let l = 0;
                 for(let i=0; i<bufferSize; i++) { o[i] = (l + (0.02 * (Math.random()*2-1)))/1.02; l = o[i]; o[i] *= 3.5; }
@@ -1021,6 +1088,52 @@ void main() {
                 waterSource.connect(waterFilter).connect(waterGain).connect(audioDest); waterSource.start(0);
                 waterGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 2.0);
             }, 0);
+
+            setTimeout(() => {
+                const windBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const windOut = windBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) { windOut[i] = (Math.random() * 2 - 1) * 0.5; }
+                windSource = audioCtx.createBufferSource();
+                windSource.buffer = windBuffer; windSource.loop = true;
+                windFilter = audioCtx.createBiquadFilter();
+                windFilter.type = 'bandpass'; windFilter.frequency.value = 800; windFilter.Q.value = 0.3;
+                windGain = audioCtx.createGain(); windGain.gain.value = 0.0;
+                windSource.connect(windFilter).connect(windGain).connect(audioDest);
+                windSource.start(0);
+                windGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 2.5);
+            }, 100);
+
+            setTimeout(() => {
+                const ambientBuffer = audioCtx.createBuffer(2, bufferSize, audioCtx.sampleRate);
+                for (let c = 0; c < 2; c++) {
+                    const ambOut = ambientBuffer.getChannelData(c);
+                    for (let i = 0; i < bufferSize; i++) {
+                        let t = i / audioCtx.sampleRate;
+                        let pad = Math.sin(t * 55 * Math.PI * 2) * 0.1 + Math.sin(t * 82.5 * Math.PI * 2) * 0.08 + Math.sin(t * 110 * Math.PI * 2) * 0.06;
+                        ambOut[i] = (pad * 0.3) + (Math.random() * 2 - 1) * 0.02;
+                    }
+                }
+                ambientSource = audioCtx.createBufferSource();
+                ambientSource.buffer = ambientBuffer; ambientSource.loop = true;
+                ambientFilter = audioCtx.createBiquadFilter();
+                ambientFilter.type = 'lowpass'; ambientFilter.frequency.value = 2000;
+                ambientGain = audioCtx.createGain(); ambientGain.gain.value = 0.0;
+                ambientSource.connect(ambientFilter).connect(ambientGain).connect(audioDest);
+                ambientSource.start(0);
+                ambientGain.gain.setTargetAtTime(0.04, audioCtx.currentTime, 3.0);
+            }, 200);
+
+            setTimeout(() => {
+                droneOsc = audioCtx.createOscillator(); droneOsc.type = 'sine'; droneOsc.frequency.value = 40;
+                const droneOsc2 = audioCtx.createOscillator(); droneOsc2.type = 'sine'; droneOsc2.frequency.value = 60;
+                const droneOsc3 = audioCtx.createOscillator(); droneOsc3.type = 'triangle'; droneOsc3.frequency.value = 80;
+                droneGain = audioCtx.createGain(); droneGain.gain.value = 0.0;
+                const droneFilter = audioCtx.createBiquadFilter(); droneFilter.type = 'lowpass'; droneFilter.frequency.value = 100;
+                droneOsc.connect(droneGain); droneOsc2.connect(droneGain); droneOsc3.connect(droneGain);
+                droneGain.connect(droneFilter).connect(audioDest);
+                droneOsc.start(0); droneOsc2.start(0); droneOsc3.start(0);
+                droneGain.gain.setTargetAtTime(0.03, audioCtx.currentTime, 3.0);
+            }, 300);
         }
 
         function unlockAudio() {
@@ -1042,12 +1155,28 @@ void main() {
             let dayFactor = Math.max(0, Math.min(1, (sunY + 0.02) / 0.17));
             currentDayFactor += (dayFactor - currentDayFactor) * 0.05;
             currentNightFactor += ((1.0 - dayFactor) - currentNightFactor) * 0.05;
+            
+            let isSunset = (sunY > -0.1 && sunY < 0.15) ? 1.0 : 0.0;
+            let sunsetFactor = isSunset * (1.0 - Math.abs(sunY - 0.02) / 0.15);
+
             if (masterPanner) masterPanner.pan.setTargetAtTime(Math.max(-1.0, Math.min(1.0, wMX * 0.8)), audioCtx.currentTime, 0.2);
+            
             if (waterFilter && waterGain && waterSource) {
                 let waveCycle = Math.sin(wTime * 0.3);
                 waterFilter.frequency.setTargetAtTime(Math.max(150, 250 + (waveCycle * 100) + (engineConfig.height * 600) - (wMY * 150)), audioCtx.currentTime, 0.1);
                 waterSource.playbackRate.setTargetAtTime(Math.max(0.1, 0.4 + (engineConfig.energy * 0.02) + (waveCycle * 0.03)), audioCtx.currentTime, 0.1);
                 waterGain.gain.setTargetAtTime(0.12 + currentDayFactor * 0.08, audioCtx.currentTime, 0.3);
+            }
+            if (windFilter && windGain) {
+                windFilter.frequency.setTargetAtTime(600 + currentDayFactor * 600 + sunsetFactor * 400, audioCtx.currentTime, 0.3);
+                windGain.gain.setTargetAtTime(0.03 + currentDayFactor * 0.05 + sunsetFactor * 0.04, audioCtx.currentTime, 0.3);
+            }
+            if (ambientFilter && ambientGain) {
+                ambientFilter.frequency.setTargetAtTime(1500 + currentDayFactor * 1000 - currentNightFactor * 500, audioCtx.currentTime, 0.5);
+                ambientGain.gain.setTargetAtTime(0.03 + currentDayFactor * 0.03 + sunsetFactor * 0.04, audioCtx.currentTime, 0.3);
+            }
+            if (droneGain) {
+                droneGain.gain.setTargetAtTime(0.02 + currentNightFactor * 0.04 + sunsetFactor * 0.02, audioCtx.currentTime, 0.5);
             }
         }
 
@@ -1060,10 +1189,24 @@ void main() {
             if (uiL) uiL.style.opacity = '1'; unlockAudio();
         };
 
+        // Desktop / Mobile UI Filtering
         if (isMobile) {
             document.getElementById('cursor').style.display = 'none';
             document.getElementById('intro-layer').style.display = 'none';
             document.getElementById('ui-layer').style.display = 'flex';
+        } else {
+            const sh = document.getElementById('swipe-hint');
+            if (sh) sh.style.display = 'none';
+        }
+
+        function hideInteractionHint() {
+            const hint = document.getElementById('swipe-hint');
+            if (hint && hint.style.opacity !== '0' && hint.style.display !== 'none') {
+                hint.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+                hint.style.opacity = '0';
+                hint.style.transform = 'translateY(10px)';
+                setTimeout(() => hint.remove(), 800);
+            }
         }
 
         function spawnRipple(e) {
@@ -1085,7 +1228,7 @@ void main() {
         }
 
         window.addEventListener('pointerdown', (e) => {
-            const h = document.getElementById('swipe-hint'); if(h) h.style.opacity = '0';
+            hideInteractionHint();
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
             isTouching = true; mX = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5; mY = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
             spawnRipple(e); syncEngine();
@@ -1093,6 +1236,7 @@ void main() {
 
         window.addEventListener('pointermove', (e) => {
             if (!isTouching && isMobile) return; 
+            hideInteractionHint();
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
             mX = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5; mY = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
             const cur = document.getElementById('cursor'); if (cur && !isMobile) { cur.style.left = e.clientX + 'px'; cur.style.top = e.clientY + 'px'; }
@@ -1105,10 +1249,29 @@ void main() {
         function engage() {
             if (isW || document.getElementById('custom-panel').style.display === 'flex') return;
             isW = true; syncEngine(); document.getElementById('ui-layer').style.opacity = '0';
+            hideInteractionHint();
             if (!isMobile) { document.getElementById('cursor').style.transform = 'translate(-50%, -50%) scale(2.0)'; document.getElementById('cursor').style.opacity = '0.3'; }
             document.getElementById('cinematic-layer').classList.add('active');
-            if (isMobile && 'vibrate' in navigator) navigator.vibrate([30, 200, 50, 150]);
-            if (!isMobile && waterGain && audioCtx) { let ct = audioCtx.currentTime; waterGain.gain.linearRampToValueAtTime(0, ct + 1.5); }
+            if (isMobile && 'vibrate' in navigator) navigator.vibrate([30, 200, 50, 150, 80, 100, 120, 50, 200, 50, 1000]);
+            
+            // Full Audio Fade out & Bell Sequence Restoration
+            if (!isMobile && audioCtx) { 
+                let ct = audioCtx.currentTime; 
+                if(waterGain) waterGain.gain.linearRampToValueAtTime(0, ct + 1.5); 
+                if(windGain) windGain.gain.linearRampToValueAtTime(0, ct + 1.5);
+                if(ambientGain) ambientGain.gain.linearRampToValueAtTime(0, ct + 1.5);
+                if(droneGain) droneGain.gain.linearRampToValueAtTime(0, ct + 2.0);
+
+                const playBell = (freq, delay) => {
+                    let osc1 = audioCtx.createOscillator(); let osc2 = audioCtx.createOscillator(); let noteGain = audioCtx.createGain();
+                    osc1.type = 'sine'; osc2.type = 'triangle'; osc1.frequency.value = freq; osc2.frequency.value = freq * 1.005;
+                    let t = audioCtx.currentTime + delay;
+                    noteGain.gain.setValueAtTime(0, t); noteGain.gain.linearRampToValueAtTime(0.15, t + 0.05); noteGain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
+                    osc1.connect(noteGain).connect(audioCtx.destination); osc2.connect(noteGain).connect(audioCtx.destination);
+                    osc1.start(t); osc1.stop(t + 2.5); osc2.start(t); osc2.stop(t + 2.5);
+                };
+                playBell(261.63, 0.0); playBell(392.00, 0.2); playBell(493.88, 0.4); playBell(587.33, 0.6); playBell(659.25, 0.8); playBell(1046.50, 1.2);
+            }
         }
 
         function applyTextConfig() {
@@ -1131,10 +1294,23 @@ void main() {
             });
         });
 
-        window.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); document.getElementById('auth-modal').style.display = 'flex'; document.getElementById('auth-input').focus(); } });
+        // Keybind Overrides
+        window.addEventListener('keydown', (e) => { 
+            // Control Panel
+            if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); document.getElementById('auth-modal').style.display = 'flex'; document.getElementById('auth-input').value = ''; document.getElementById('auth-input').focus(); } 
+            
+            // Telemetry Display Toggle
+            if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'h') { 
+                e.preventDefault(); 
+                const tel = document.getElementById('telemetry-layer'); 
+                tel.style.display = tel.style.display === 'flex' ? 'none' : 'flex'; 
+            }
+        });
+
         document.getElementById('auth-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') { if (e.target.value.trim() === 'abcab123') { document.getElementById('auth-modal').style.display = 'none'; document.getElementById('custom-panel').style.display = 'flex'; e.target.value = ''; } else { e.target.style.color = '#ff4444'; setTimeout(() => e.target.style.color = '#fff', 600); } }
         });
+
         function resetAdminPanel() { localStorage.removeItem('rahatil_engine_config'); engineConfig = { ...defaultConfig }; applyTextConfig(); syncEngine(); location.reload(); }
         function closeAdminPanel() { document.getElementById('custom-panel').style.display = 'none'; }
     </script>
