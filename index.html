@@ -490,11 +490,8 @@ vec3 GetMeteors(vec3 rd, float nightFactor) {
     return meteorColor;
 }
 
-// ☁️ MOBILE PERF FIX: Highly Optimized Volumetric Cloud Execution
 float getClouds(vec3 rd, float t, bool isRef) {
     if (u_drsTier < 0.5) return 0.0;
-    if (isRef && u_isMobile > 0.5) return 0.0; // Cut reflection clouds on mobile to save pure fill-rate
-
     vec2 uv = rd.xz / (abs(rd.y) + 0.001) * 0.15;
     uv.x -= t * 0.025;      
     
@@ -568,12 +565,11 @@ void main() {
 
     if (rd.y >= 0.0 && !skipSky) {
         if(trueNight > 0.05) {
-            // FIX: Single lookup optimized Nebula algorithm for mobile ALUs
             if (u_drsTier > 0.5) { 
                 vec2 nebUV = rd.xz / (abs(rd.y) + 0.001);
                 float neb = texture(u_cloudLUT, nebUV * 0.05 + u_time * 0.002).r;
                 if (u_isMobile < 0.5) neb *= texture(u_cloudLUT, nebUV * 0.1 - u_time * 0.002).r;
-                else neb = neb * neb; // Cheaper contrast simulation for mobile
+                else neb = neb * neb; 
                 
                 col += vec3(0.08, 0.03, 0.12) * neb * trueNight * smoothstep(0.0, 0.3, rd.y) * 0.6 * (1.0 - smoothstep(0.2, 0.8, u_warp));
             }
@@ -610,34 +606,44 @@ void main() {
         col += vec3(0.04, 0.05, 0.1) * (exp2(8.0 * log2(moonDot + 0.0001)) * 0.15 + exp2(25.0 * log2(moonDot + 0.0001)) * 0.08) * trueNight;
     }
 
+    // 🌊 ENGINEERING FIX: Contextual Ray Termination & Material Gating Layer
     if(rd.y < 0.0) {
         float d = -(ro.y) / min(rd.y, -0.001); 
+        float mistFade = smoothstep(80.0, 250.0, d);
         
-        if (d > 250.0) {
+        // Contextual Termination: Hard Cutoff for heavily fogged pixels (saves millions of ALUs)
+        if (mistFade > 0.99) {
             col = mix(horizon, vec3(0.0), trueNight * 0.3);
         } else {
             vec3 p = ro + rd * d;
-            bool doMicro = (d < 50.0);
             
             float hOffset = GetWaterHeight(p, false);
             p += rd * (hOffset / max(abs(rd.y), 0.05));
             
-            vec3 N_sharp = GetNormal(p, true);  
-            vec3 N_smooth = GetNormal(p, false);
             float waveLocalH = GetWaterHeight(p, false);
             
-            vec3 N_spec = normalize(mix(N_smooth, N_sharp, 0.9)); 
-            vec3 refR_Planar = reflect(rd, vec3(0, 1, 0)); 
-            vec3 reflectedSky = mix(horizon, zenith, smoothstep(-0.2, 0.6, reflect(rd, N_smooth).y));
-            
-            if(trueNight > 0.05 && !doMicro && u_drsTier > 1.5) {
-                if (u_isMobile < 0.5) reflectedSky += vec3(0.04, 0.015, 0.06) * texture(u_cloudLUT, refR_Planar.xz * 0.1).r * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
-                reflectedSky += GetStars(refR_Planar, trueNight, true);
+            // Adaptive Detail Material Iteration
+            vec3 N_smooth = GetNormal(p, false);
+            vec3 N_sharp = N_smooth;
+            if (d < 120.0) {
+                N_sharp = GetNormal(p, true);
             }
+            
+            vec3 N_spec = normalize(mix(N_smooth, N_sharp, smoothstep(120.0, 50.0, d) * 0.9)); 
+            vec3 refR_Planar = reflect(rd, N_smooth); 
+            vec3 reflectedSky = mix(horizon, zenith, smoothstep(-0.2, 0.6, refR_Planar.y));
+            
+            // Volumetric Reflection Gate Cutoff (Saves evaluating reflections on distant waves)
+            if (d < 150.0) {
+                if(trueNight > 0.05 && u_drsTier > 1.5) {
+                    if (u_isMobile < 0.5) reflectedSky += vec3(0.04, 0.015, 0.06) * texture(u_cloudLUT, refR_Planar.xz * 0.1).r * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
+                    reflectedSky += GetStars(refR_Planar, trueNight, true);
+                }
 
-            if (u_drsTier > 2.5) { 
-                float refCloudAlpha = getClouds(refR_Planar, u_time, true);
-                if(refCloudAlpha > 0.0) reflectedSky = mix(reflectedSky, getCloudColor(refR_Planar, sunDir), refCloudAlpha * 0.55);
+                if (u_drsTier > 2.5) { 
+                    float refCloudAlpha = getClouds(refR_Planar, u_time, true);
+                    if(refCloudAlpha > 0.0) reflectedSky = mix(reflectedSky, getCloudColor(refR_Planar, sunDir), refCloudAlpha * 0.55);
+                }
             }
 
             float fresnel = exp2(5.0 * log2(1.0 - max(0.0, dot(-rd, N_sharp)) + 0.0001));
@@ -664,7 +670,6 @@ void main() {
             float diffuseMoon = max(0.0, dot(N_smooth, waterMoonDir));
             waterCol += (vec3(0.02, 0.028, 0.05) + tidalColor * 0.15) * (diffuseMoon * 0.4) * trueNight;
             
-            float mistFade = smoothstep(60.0, 250.0, d);
             vec3 mistColor = mix(horizon, vec3(0.0), trueNight * 0.3);
             col = mix(waterCol, mistColor, mistFade);
         }
@@ -680,24 +685,20 @@ void main() {
 }</script>
 
     <script>
-        // ENGINE CORE MODULE (Runs natively inside Web Worker OR Main Thread gracefully)
         function TidalEngineCore() {
             const ctx = this;
             let gl, prg, canvas, prgBlur, prgComp;
             let uLocs = {}, uLocsBlur = {}, uLocsComp = {}, cloudLUT;
             
-            // Framebuffer Render Targets
             let rtMain, rtBlurH, rtBlurV;
             let hasFloat = false, bloomThresh = 1.0;
             
-            // State
             let mX = 0, mY = 0.2, targetMX = 0, targetMY = 0.2;
             let warp = 0, waveTime = 0, detailFade = 1.0;
             let isW = false, isTouching = false, isMobile = false;
             let engineConfig = {};
             let totalFrames = 0, lastTime = performance.now(), isPaused = false;
             
-            // DRS & Telemetry State
             let drsTier = 4, drsCooldown = 0, drsIndex = 0, drsCount = 0, drsSum = 0;
             const DRS_HISTORY_SIZE = 60;
             const frameTimes = new Float32Array(DRS_HISTORY_SIZE);
@@ -734,8 +735,6 @@ void main() {
                     gl.deleteFramebuffer(rtBlurV.fb); gl.deleteTexture(rtBlurV.tex);
                 }
                 rtMain = createRenderTarget(w, h, hasFloat);
-                
-                // PERFORMANCE FIX: Quarter-res downsampling perfectly cuts FBO memory bandwidth by 75%
                 let bw = Math.max(1, w >> 2); 
                 let bh = Math.max(1, h >> 2);
                 rtBlurH = createRenderTarget(bw, bh, hasFloat); 
@@ -861,7 +860,8 @@ void main() {
             }
 
             function render(now) {
-                if (isPaused || !rtMain) { ctx.requestAnimationFrame(render); return; }
+                if (isPaused) { ctx.requestAnimationFrame(render); return; }
+                if (!rtMain) { ctx.requestAnimationFrame(render); return; } // Safely await resize
                 
                 totalFrames++; 
                 let elapsed = now - (lastTime || now);
@@ -975,7 +975,6 @@ void main() {
 
         let mX = 0, mY = 0.2, isW = false, isTouching = false;
         
-        // FIX: Optimal Mobile Initialization DPR (Sharp, but optimized for multi-pass FBO scaling)
         let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2.0);
         let currentDPR = baseDPR;
         let redirected = false;
@@ -1240,8 +1239,12 @@ void main() {
             });
         });
 
+        // Keybind Overrides
         window.addEventListener('keydown', (e) => { 
+            // Control Panel
             if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); document.getElementById('auth-modal').style.display = 'flex'; document.getElementById('auth-input').value = ''; document.getElementById('auth-input').focus(); } 
+            
+            // Telemetry Display Toggle
             if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'h') { 
                 e.preventDefault(); 
                 const tel = document.getElementById('telemetry-layer'); 
