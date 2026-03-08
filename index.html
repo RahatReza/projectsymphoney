@@ -378,7 +378,6 @@ uniform float u_isMobile;
 uniform float u_warmup; 
 uniform float u_detailFade; 
 
-uniform vec3 u_ripples[4];
 uniform sampler2D u_cloudLUT;
 
 #define PI_2 6.28318530718
@@ -395,28 +394,6 @@ float noise(vec2 p) {
     vec2 i = floor(p); vec2 f = fract(p);
     vec2 u = f*f*(3.0-2.0*f);
     return mix(mix(hash(i), hash(i+vec2(1,0)), u.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
-}
-
-vec3 GetAnalyticalRipples(vec3 p) {
-    vec3 rData = vec3(0.0);
-    for(int i = 0; i < 4; i++) {
-        float rt = u_time - u_ripples[i].z;
-        if(rt > 0.0 && rt < 3.5) {
-            vec2 diff = p.xz - u_ripples[i].xy;
-            float dist = length(diff);
-            if(dist > 0.001) {
-                float r = dist - rt * 3.5;
-                float env = smoothstep(1.5, 0.0, abs(r)) * smoothstep(3.5, 0.0, rt) * smoothstep(0.0, 0.5, dist) * 0.08;
-                float wave = sin(r * 15.0);
-                rData.x += wave * env; 
-                float dWave = 15.0 * cos(r * 15.0) * env;
-                vec2 grad = dWave * (diff / dist);
-                rData.y += grad.x;
-                rData.z += grad.y;
-            }
-        }
-    }
-    return rData;
 }
 
 float GetWaterHeight(vec3 p, bool micro) {
@@ -513,8 +490,9 @@ vec3 GetMeteors(vec3 rd, float nightFactor) {
     return meteorColor;
 }
 
+// ☁️ FIX: Re-calibrated DRS limits to allow Mobile Clouds evaluation
 float getClouds(vec3 rd, float t, bool isRef) {
-    if (u_drsTier < 1.5) return 0.0;
+    if (u_drsTier < 0.5) return 0.0;
     vec2 uv = rd.xz / (abs(rd.y) + 0.001) * 0.15;
     uv.x -= t * 0.025;      
     
@@ -524,7 +502,7 @@ float getClouds(vec3 rd, float t, bool isRef) {
             uv = rotCloud * uv;
             f += 0.5 * texture(u_cloudLUT, uv + t * 0.015).r;
         }
-        if (u_drsTier > 3.5 && u_detailFade > 0.01) { 
+        if (u_drsTier > 2.5 && u_detailFade > 0.01) { 
             uv = rotCloud * uv;
             f += 0.25 * texture(u_cloudLUT, (uv - t * 0.01) * 2.0).r * u_detailFade;
         }
@@ -588,7 +566,8 @@ void main() {
 
     if (rd.y >= 0.0 && !skipSky) {
         if(trueNight > 0.05) {
-            if (u_drsTier > 1.5) { 
+            // FIX: Re-calibrated DRS limits to allow Nebula drawing on Mobile
+            if (u_drsTier > 0.5) { 
                 vec2 nebUV = rd.xz / (abs(rd.y) + 0.001);
                 float neb = texture(u_cloudLUT, nebUV * 0.05 + u_time * 0.002).r * texture(u_cloudLUT, nebUV * 0.1 - u_time * 0.002).r;
                 col += vec3(0.08, 0.03, 0.12) * neb * trueNight * smoothstep(0.0, 0.3, rd.y) * 0.6 * (1.0 - smoothstep(0.2, 0.8, u_warp));
@@ -642,14 +621,6 @@ void main() {
             vec3 N_smooth = GetNormal(p, false);
             float waveLocalH = GetWaterHeight(p, false);
             
-            if (u_isMobile > 0.5) {
-                vec3 rippleData = GetAnalyticalRipples(p);
-                waveLocalH += rippleData.x;
-                vec3 rGrad = vec3(rippleData.y * 0.04, 0.0, rippleData.z * 0.04); 
-                N_sharp = normalize(N_sharp + rGrad);
-                N_smooth = normalize(N_smooth + rGrad * 0.5); 
-            }
-            
             vec3 N_spec = normalize(mix(N_smooth, N_sharp, 0.9)); 
             vec3 refR_Planar = reflect(rd, vec3(0, 1, 0)); 
             vec3 reflectedSky = mix(horizon, zenith, smoothstep(-0.2, 0.6, reflect(rd, N_smooth).y));
@@ -699,7 +670,6 @@ void main() {
     if (u_drsTier > 0.5) { 
         float hyperGlow = pow(u_warp, 3.5) * 2.5;
         float caSplit = u_warp * length(uv) * 1.5;
-        // RESTORED: Raw stylistic warp RGB chromatic aberration
         col += vec3(0.85, 0.95, 1.0) * hyperGlow + vec3(caSplit, 0.0, -caSplit) * u_warp * 1.5;
     }
 
@@ -711,14 +681,11 @@ void main() {
         function TidalEngineCore() {
             const ctx = this;
             let gl, prg, canvas, prgBlur, prgComp;
-            let uLocs = {}, uLocsRipples =[], uLocsBlur = {}, uLocsComp = {}, cloudLUT;
+            let uLocs = {}, uLocsBlur = {}, uLocsComp = {}, cloudLUT;
             
             // Framebuffer Render Targets
             let rtMain, rtBlurH, rtBlurV;
             let hasFloat = false, bloomThresh = 1.0;
-            
-            // Critical Pre-Allocation ensuring no undefined pointers on first frame
-            let activeRipples = Array(4).fill().map(() => ({ x: 0, z: 0, time: -100 }));
             
             // State
             let mX = 0, mY = 0.2, targetMX = 0, targetMY = 0.2;
@@ -864,8 +831,7 @@ void main() {
                 uLocs.sDensity = gl.getUniformLocation(prg, 'u_starDensity'); uLocs.isMobile = gl.getUniformLocation(prg, 'u_isMobile');
                 uLocs.warmup = gl.getUniformLocation(prg, 'u_warmup'); uLocs.detailFade = gl.getUniformLocation(prg, 'u_detailFade');
                 uLocs.drsTier = gl.getUniformLocation(prg, 'u_drsTier'); uLocs.cloudLUT = gl.getUniformLocation(prg, 'u_cloudLUT');
-                for(let i=0; i<4; i++) uLocsRipples.push(gl.getUniformLocation(prg, `u_ripples[${i}]`));
-
+                
                 uLocsBlur.tIn = gl.getUniformLocation(prgBlur, 'tIn'); uLocsBlur.uDir = gl.getUniformLocation(prgBlur, 'uDir');
                 uLocsBlur.uFirst = gl.getUniformLocation(prgBlur, 'uFirst'); uLocsBlur.uThresh = gl.getUniformLocation(prgBlur, 'uThresh');
                 
@@ -876,11 +842,13 @@ void main() {
                 ctx.requestAnimationFrame(render);
             }
 
+            // FIX: Removed rigid DPR clamping to resolve perceived blurriness on mobile High-DPI screens
             function applyDRSTier() {
                 let newDPR = currentDPR;
                 if (isMobile) {
-                    if (drsTier >= 2) newDPR = baseDPR; 
-                    else if (drsTier === 1) newDPR = Math.max(0.5, baseDPR * 0.8); 
+                    if (drsTier >= 3) newDPR = baseDPR; 
+                    else if (drsTier === 2) newDPR = Math.max(1.0, baseDPR * 0.8); 
+                    else if (drsTier === 1) newDPR = Math.max(0.75, baseDPR * 0.6); 
                     else newDPR = 0.5; 
                 } else newDPR = baseDPR;
                 if (Math.abs(newDPR - currentDPR) > 0.01) {
@@ -914,7 +882,7 @@ void main() {
                     if (drsCount === DRS_HISTORY_SIZE && drsCooldown <= 0) {
                         let fps = 1000 / (drsSum / DRS_HISTORY_SIZE); let oldTier = drsTier;
                         if (fps < 48 && drsTier > 0) { drsTier--; drsCooldown = 90; if (isMobile) mobileThermalLock = true; }
-                        else if (fps >= 58 && drsTier < (isMobile ? 2 : 4) && !mobileThermalLock) { drsTier++; drsCooldown = 90; }
+                        else if (fps >= 58 && drsTier < (isMobile ? 3 : 4) && !mobileThermalLock) { drsTier++; drsCooldown = 90; }
                         if (oldTier !== drsTier) { applyDRSTier(); drsCount = 0; drsSum = 0; }
                     }
                 }
@@ -939,7 +907,7 @@ void main() {
                 gl.uniform1f(uLocs.sDensity, engineConfig.stars); gl.uniform1f(uLocs.isMobile, isMobile ? 1.0 : 0.0);
                 gl.uniform1f(uLocs.warmup, Math.max(0.0, 1.0 - (totalFrames / 120.0)));
                 gl.uniform1f(uLocs.detailFade, detailFade); gl.uniform1f(uLocs.drsTier, drsTier);
-                for(let i=0; i<4; i++) if(uLocsRipples[i]) gl.uniform3f(uLocsRipples[i], activeRipples[i].x, activeRipples[i].z, activeRipples[i].time);
+                
                 gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, cloudLUT); gl.uniform1i(uLocs.cloudLUT, 0);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
@@ -976,11 +944,11 @@ void main() {
                 const data = e.data;
                 if (data.type === 'INIT') {
                     canvas = data.canvas; isMobile = data.isMobile; baseDPR = data.baseDPR;
-                    currentDPR = data.currentDPR; drsTier = isMobile ? 1 : 4; engineConfig = data.engineConfig;
+                    currentDPR = data.currentDPR; drsTier = isMobile ? 3 : 4; engineConfig = data.engineConfig;
                     initGL(data.fsSource);
                 } else if (data.type === 'SYNC') {
                     targetMX = data.mX; targetMY = data.mY; isW = data.isW;
-                    isTouching = data.isTouching; activeRipples = data.ripples; engineConfig = data.engineConfig;
+                    isTouching = data.isTouching; engineConfig = data.engineConfig;
                 } else if (data.type === 'RESIZE') {
                     if(canvas) { 
                         canvas.width = data.w * currentDPR; canvas.height = data.h * currentDPR; 
@@ -1009,9 +977,10 @@ void main() {
         try { const sd = localStorage.getItem('rahatil_engine_config'); if(sd) engineConfig = { ...defaultConfig, ...JSON.parse(sd) }; } catch(e){}
 
         let mX = 0, mY = 0.2, isW = false, isTouching = false;
-        let activeRipples = Array(4).fill().map(() => ({ x: 0, z: 0, time: -100 })), rippleIdx = 0, lastRippleTime = 0;
-        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.0) : Math.min(window.devicePixelRatio, 2.0);
-        let currentDPR = isMobile ? baseDPR * 0.8 : baseDPR;
+        
+        // FIX: Allowed Mobile to initialize up to 2.0 DPR to prevent blurry UI/Canvas scaling
+        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 2.0) : Math.min(window.devicePixelRatio, 2.0);
+        let currentDPR = baseDPR;
         let redirected = false;
 
         class MockWorker {
@@ -1055,7 +1024,6 @@ void main() {
         }
         bootEngine();
 
-        // Safe Context Loss Handling ensuring no crash regression on suspend
         canvasEl.addEventListener("webglcontextlost", (e) => { e.preventDefault(); engine.postMessage({ type: 'PAUSE', paused: true }); }, false);
         canvasEl.addEventListener("webglcontextrestored", () => { location.reload(); }, false);
 
@@ -1063,7 +1031,7 @@ void main() {
         window.addEventListener('resize', triggerResize);
         triggerResize();
 
-        function syncEngine() { engine.postMessage({ type: 'SYNC', mX, mY, isW, isTouching, ripples: activeRipples, engineConfig }); }
+        function syncEngine() { engine.postMessage({ type: 'SYNC', mX, mY, isW, isTouching, engineConfig }); }
 
         // ----------------------------------------------------------------------
         // FULL AUDIO GRAPH & BELL RESTORATION
@@ -1209,29 +1177,11 @@ void main() {
             }
         }
 
-        function spawnRipple(e) {
-            if (!isMobile || isW) return;
-            let now = performance.now(); if (now - lastRippleTime < 120) return; 
-            let pX = e.clientX * currentDPR, pY = (window.innerHeight - e.clientY) * currentDPR;
-            let uvX = (pX - 0.5 * window.innerWidth * currentDPR) / (window.innerHeight * currentDPR);
-            let uvY = (pY - 0.5 * window.innerHeight * currentDPR) / (window.innerHeight * currentDPR);
-            let rdY = uvY - 0.1;
-            if (rdY < -0.01) {
-                let rdZ = 1.1; let len = Math.sqrt(uvX*uvX + rdY*rdY + rdZ*rdZ);
-                let d = -1.5 / (rdY/len);
-                if (d > 0.0 && d < 80.0) { 
-                    activeRipples[rippleIdx] = { x: (uvX/len)*d, z: (now*0.0003)*2.0 + (rdZ/len)*d, time: now*0.001 };
-                    rippleIdx = (rippleIdx + 1) % 4; lastRippleTime = now;
-                    syncEngine();
-                }
-            }
-        }
-
         window.addEventListener('pointerdown', (e) => {
             hideInteractionHint();
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
             isTouching = true; mX = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5; mY = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
-            spawnRipple(e); syncEngine();
+            syncEngine();
         }, { passive: true });
 
         window.addEventListener('pointermove', (e) => {
@@ -1240,7 +1190,7 @@ void main() {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
             mX = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5; mY = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
             const cur = document.getElementById('cursor'); if (cur && !isMobile) { cur.style.left = e.clientX + 'px'; cur.style.top = e.clientY + 'px'; }
-            if (isTouching) spawnRipple(e); syncEngine();
+            syncEngine();
         }, { passive: true });
 
         window.addEventListener('pointerup', () => { isTouching = false; syncEngine(); }, { passive: true });
