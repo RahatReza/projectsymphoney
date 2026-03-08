@@ -490,9 +490,11 @@ vec3 GetMeteors(vec3 rd, float nightFactor) {
     return meteorColor;
 }
 
-// ☁️ FIX: Re-calibrated DRS limits to allow Mobile Clouds evaluation
+// ☁️ MOBILE PERF FIX: Highly Optimized Volumetric Cloud Execution
 float getClouds(vec3 rd, float t, bool isRef) {
     if (u_drsTier < 0.5) return 0.0;
+    if (isRef && u_isMobile > 0.5) return 0.0; // Cut reflection clouds on mobile to save pure fill-rate
+
     vec2 uv = rd.xz / (abs(rd.y) + 0.001) * 0.15;
     uv.x -= t * 0.025;      
     
@@ -502,7 +504,7 @@ float getClouds(vec3 rd, float t, bool isRef) {
             uv = rotCloud * uv;
             f += 0.5 * texture(u_cloudLUT, uv + t * 0.015).r;
         }
-        if (u_drsTier > 2.5 && u_detailFade > 0.01) { 
+        if (u_drsTier > 2.5 && u_detailFade > 0.01 && u_isMobile < 0.5) { 
             uv = rotCloud * uv;
             f += 0.25 * texture(u_cloudLUT, (uv - t * 0.01) * 2.0).r * u_detailFade;
         }
@@ -566,10 +568,13 @@ void main() {
 
     if (rd.y >= 0.0 && !skipSky) {
         if(trueNight > 0.05) {
-            // FIX: Re-calibrated DRS limits to allow Nebula drawing on Mobile
+            // FIX: Single lookup optimized Nebula algorithm for mobile ALUs
             if (u_drsTier > 0.5) { 
                 vec2 nebUV = rd.xz / (abs(rd.y) + 0.001);
-                float neb = texture(u_cloudLUT, nebUV * 0.05 + u_time * 0.002).r * texture(u_cloudLUT, nebUV * 0.1 - u_time * 0.002).r;
+                float neb = texture(u_cloudLUT, nebUV * 0.05 + u_time * 0.002).r;
+                if (u_isMobile < 0.5) neb *= texture(u_cloudLUT, nebUV * 0.1 - u_time * 0.002).r;
+                else neb = neb * neb; // Cheaper contrast simulation for mobile
+                
                 col += vec3(0.08, 0.03, 0.12) * neb * trueNight * smoothstep(0.0, 0.3, rd.y) * 0.6 * (1.0 - smoothstep(0.2, 0.8, u_warp));
             }
             col += GetStars(rd, trueNight, false) * smoothstep(-0.1, 0.2, rd.y);
@@ -626,7 +631,7 @@ void main() {
             vec3 reflectedSky = mix(horizon, zenith, smoothstep(-0.2, 0.6, reflect(rd, N_smooth).y));
             
             if(trueNight > 0.05 && !doMicro && u_drsTier > 1.5) {
-                reflectedSky += vec3(0.04, 0.015, 0.06) * texture(u_cloudLUT, refR_Planar.xz * 0.1).r * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
+                if (u_isMobile < 0.5) reflectedSky += vec3(0.04, 0.015, 0.06) * texture(u_cloudLUT, refR_Planar.xz * 0.1).r * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
                 reflectedSky += GetStars(refR_Planar, trueNight, true);
             }
 
@@ -643,7 +648,6 @@ void main() {
             vec3 waterSunDir = normalize(vec3(sunDir.x, max(sunDir.y, 0.001), sunDir.z));
             vec3 waterMoonDir = normalize(vec3(moonDir.x, max(moonDir.y, 0.001), moonDir.z));
 
-            // FIX: Calibrated physical Specular response to prevent mobile wash-out
             float specPower = u_drsTier < 1.5 ? 150.0 : (u_isMobile > 0.5 ? 250.0 : 400.0);
             float sunSpecMult = u_isMobile > 0.5 ? 1.2 : 4.5;
             float moonSpecMult = u_isMobile > 0.5 ? 0.8 : 2.5;
@@ -660,7 +664,6 @@ void main() {
             float diffuseMoon = max(0.0, dot(N_smooth, waterMoonDir));
             waterCol += (vec3(0.02, 0.028, 0.05) + tidalColor * 0.15) * (diffuseMoon * 0.4) * trueNight;
             
-            // FIX: Perfect atmospheric mist integration eliminating the sharp "toy line" horizon
             float mistFade = smoothstep(60.0, 250.0, d);
             vec3 mistColor = mix(horizon, vec3(0.0), trueNight * 0.3);
             col = mix(waterCol, mistColor, mistFade);
@@ -731,8 +734,12 @@ void main() {
                     gl.deleteFramebuffer(rtBlurV.fb); gl.deleteTexture(rtBlurV.tex);
                 }
                 rtMain = createRenderTarget(w, h, hasFloat);
-                rtBlurH = createRenderTarget(w >> 1, h >> 1, hasFloat); // Fast Half-Res
-                rtBlurV = createRenderTarget(w >> 1, h >> 1, hasFloat);
+                
+                // PERFORMANCE FIX: Quarter-res downsampling perfectly cuts FBO memory bandwidth by 75%
+                let bw = Math.max(1, w >> 2); 
+                let bh = Math.max(1, h >> 2);
+                rtBlurH = createRenderTarget(bw, bh, hasFloat); 
+                rtBlurV = createRenderTarget(bw, bh, hasFloat);
             }
 
             function generateCloudLUT() {
@@ -778,7 +785,6 @@ void main() {
                 gl = canvas.getContext('webgl2', { antialias: false, powerPreference: "high-performance" });
                 if (!gl) return false;
                 
-                // Hardware fallback safety net for FLOAT buffers
                 hasFloat = !!(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'));
                 bloomThresh = hasFloat ? 1.0 : 0.85;
 
@@ -786,11 +792,9 @@ void main() {
 
                 const vs = compile(gl.VERTEX_SHADER, '#version 300 es\nin vec4 p; out vec2 vUv; void main(){ vUv=p.xy*0.5+0.5; gl_Position=p; }');
                 
-                // MAIN SCENE
                 prg = gl.createProgram();
                 gl.attachShader(prg, vs); gl.attachShader(prg, compile(gl.FRAGMENT_SHADER, fsSource)); gl.linkProgram(prg);
                 
-                // BLUR PASS
                 prgBlur = gl.createProgram();
                 const fsBlur = `#version 300 es\nprecision highp float; in vec2 vUv; out vec4 fCol;
                     uniform sampler2D tIn; uniform vec2 uDir; uniform float uFirst; uniform float uThresh;
@@ -806,7 +810,6 @@ void main() {
                     }`;
                 gl.attachShader(prgBlur, vs); gl.attachShader(prgBlur, compile(gl.FRAGMENT_SHADER, fsBlur)); gl.linkProgram(prgBlur);
 
-                // COMPOSITE + ACES TONEMAPPING
                 prgComp = gl.createProgram();
                 const fsComp = `#version 300 es\nprecision highp float; in vec2 vUv; out vec4 fCol;
                     uniform sampler2D tScene; uniform sampler2D tBloom; uniform float uWarp;
@@ -842,7 +845,6 @@ void main() {
                 ctx.requestAnimationFrame(render);
             }
 
-            // FIX: Removed rigid DPR clamping to resolve perceived blurriness on mobile High-DPI screens
             function applyDRSTier() {
                 let newDPR = currentDPR;
                 if (isMobile) {
@@ -851,6 +853,7 @@ void main() {
                     else if (drsTier === 1) newDPR = Math.max(0.75, baseDPR * 0.6); 
                     else newDPR = 0.5; 
                 } else newDPR = baseDPR;
+                
                 if (Math.abs(newDPR - currentDPR) > 0.01) {
                     currentDPR = newDPR;
                     ctx.postMessage({ type: 'DPR_CHANGE', dpr: currentDPR });
@@ -858,8 +861,7 @@ void main() {
             }
 
             function render(now) {
-                if (isPaused) { ctx.requestAnimationFrame(render); return; }
-                if (!rtMain) { ctx.requestAnimationFrame(render); return; } // Safely await resize
+                if (isPaused || !rtMain) { ctx.requestAnimationFrame(render); return; }
                 
                 totalFrames++; 
                 let elapsed = now - (lastTime || now);
@@ -887,7 +889,6 @@ void main() {
                     }
                 }
                 
-                // TELEMETRY BROADCAST
                 if (totalFrames % 30 === 0) {
                     let calcFps = Math.round(1000 / (drsSum / DRS_HISTORY_SIZE || 16.666));
                     let calcLat = Math.round(elapsed * 10) / 10;
@@ -896,7 +897,6 @@ void main() {
 
                 if (isW) warp = Math.min(1.0, warp + (0.008 * dtFactor));
                 
-                // 1. MAIN PASS
                 gl.bindFramebuffer(gl.FRAMEBUFFER, rtMain.fb);
                 gl.viewport(0, 0, rtMain.w, rtMain.h);
                 gl.useProgram(prg);
@@ -911,7 +911,6 @@ void main() {
                 gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, cloudLUT); gl.uniform1i(uLocs.cloudLUT, 0);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-                // 2. BLUR H (Extract + Blur)
                 gl.bindFramebuffer(gl.FRAMEBUFFER, rtBlurH.fb);
                 gl.viewport(0, 0, rtBlurH.w, rtBlurH.h);
                 gl.useProgram(prgBlur);
@@ -920,14 +919,12 @@ void main() {
                 gl.uniform1f(uLocsBlur.uFirst, 1.0); gl.uniform1f(uLocsBlur.uThresh, bloomThresh);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-                // 3. BLUR V
                 gl.bindFramebuffer(gl.FRAMEBUFFER, rtBlurV.fb);
                 gl.viewport(0, 0, rtBlurV.w, rtBlurV.h);
                 gl.bindTexture(gl.TEXTURE_2D, rtBlurH.tex);
                 gl.uniform2f(uLocsBlur.uDir, 0.0, 1.0/rtBlurV.h); gl.uniform1f(uLocsBlur.uFirst, 0.0);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-                // 4. COMPOSITE
                 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
                 gl.viewport(0, 0, canvas.width, canvas.height);
                 gl.useProgram(prgComp);
@@ -978,8 +975,8 @@ void main() {
 
         let mX = 0, mY = 0.2, isW = false, isTouching = false;
         
-        // FIX: Allowed Mobile to initialize up to 2.0 DPR to prevent blurry UI/Canvas scaling
-        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 2.0) : Math.min(window.devicePixelRatio, 2.0);
+        // FIX: Optimal Mobile Initialization DPR (Sharp, but optimized for multi-pass FBO scaling)
+        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.5) : Math.min(window.devicePixelRatio, 2.0);
         let currentDPR = baseDPR;
         let redirected = false;
 
@@ -1034,7 +1031,7 @@ void main() {
         function syncEngine() { engine.postMessage({ type: 'SYNC', mX, mY, isW, isTouching, engineConfig }); }
 
         // ----------------------------------------------------------------------
-        // FULL AUDIO GRAPH & BELL RESTORATION
+        // AUDIO GRAPH
         // ----------------------------------------------------------------------
         let audioCtx, waterSource, waterFilter, waterGain, windSource, windFilter, windGain;
         let ambientSource, ambientFilter, ambientGain, nightSource, nightFilter, nightGain;
@@ -1204,7 +1201,6 @@ void main() {
             document.getElementById('cinematic-layer').classList.add('active');
             if (isMobile && 'vibrate' in navigator) navigator.vibrate([30, 200, 50, 150, 80, 100, 120, 50, 200, 50, 1000]);
             
-            // Full Audio Fade out & Bell Sequence Restoration
             if (!isMobile && audioCtx) { 
                 let ct = audioCtx.currentTime; 
                 if(waterGain) waterGain.gain.linearRampToValueAtTime(0, ct + 1.5); 
@@ -1244,12 +1240,8 @@ void main() {
             });
         });
 
-        // Keybind Overrides
         window.addEventListener('keydown', (e) => { 
-            // Control Panel
             if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); document.getElementById('auth-modal').style.display = 'flex'; document.getElementById('auth-input').value = ''; document.getElementById('auth-input').focus(); } 
-            
-            // Telemetry Display Toggle
             if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'h') { 
                 e.preventDefault(); 
                 const tel = document.getElementById('telemetry-layer'); 
