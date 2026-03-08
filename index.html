@@ -561,18 +561,15 @@ float noise(vec2 p) {
     return mix(mix(hash(i), hash(i+vec2(1,0)), u.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
 }
 
-// 🌊 FIX: NEVER return a flat plane. Even Tier 0 gets a highly optimized wave.
 float GetWaterHeight(vec3 p, bool micro) {
     float t = u_waveTime;
     vec2 uv = p.xz * 0.75;
     
-    // Noise is the main mobile killer. Disable it entirely unless Tier 2+
     float nVal = 0.5;
     if (micro && u_drsTier > 1.5) {
         nVal = noise(uv * 0.3 + t * 0.1) * (1.0 - u_warmup);
     }
     
-    // PRIMARY WAVE (Always ON, extremely cheap vector math)
     vec3 dots = mod(vec3(
         dot(uv, vec2(0.64018, 0.76822)) * 1.5 + t * 0.8,
         dot(uv, vec2(-0.78086, 0.62469)) * 2.8 - t * 1.2,
@@ -585,7 +582,6 @@ float GetWaterHeight(vec3 p, bool micro) {
     vec3 amps = vec3(1.5 * (0.85 + 0.3 * nVal), 0.8, 0.4) * u_waveHeight;
     float h = dot(sines, amps);
     
-    // SECONDARY WAVE (Turns off ONLY on Tier 0 absolute fallback)
     if (u_drsTier > 0.5) {
         vec2 dots2 = mod(vec2(
             dot(uv, vec2(-0.8137, -0.5812)) * 3.5 + t * 0.6,
@@ -597,7 +593,6 @@ float GetWaterHeight(vec3 p, bool micro) {
         h += dot(sines2, amps2);
     }
 
-    // MICRO DETAIL (High-end phones and PC only)
     if(micro && u_drsTier > 2.5 && u_detailFade > 0.01) {
         vec2 uv1 = rotMicro * uv * 8.0;
         h += (noise(uv1 + t) * 0.5) * (u_waveHeight * 0.18) * u_detailFade * (1.0 - u_warmup);
@@ -618,7 +613,7 @@ vec3 GetNormal(vec3 p, bool micro) {
 }
 
 vec3 GetStars(vec3 rd, float nightFactor, bool isRef) {
-    if (u_drsTier < 0.5 && isRef) return vec3(0.0); // No ref stars on potato tier, but KEEP sky stars
+    if (u_drsTier < 0.5 && isRef) return vec3(0.0); 
 
     vec3 starRd = isRef ? normalize(vec3(rd.x, abs(rd.y), rd.z)) : rd;
     vec2 starUV = vec2(atan(starRd.x, starRd.z) * 0.5, starRd.y);
@@ -800,12 +795,12 @@ void main() {
         col += vec3(0.04, 0.05, 0.1) * (exp2(8.0 * log2(moonDot + 0.0001)) * 0.15 + exp2(25.0 * log2(moonDot + 0.0001)) * 0.08) * trueNight;
     }
 
+    // PRODUCTION HORIZON SEAM RESOLUTION
     if(rd.y < 0.0) {
-        float d = -(ro.y) / min(rd.y, -0.002); 
+        float d = -(ro.y) / min(rd.y, -0.0001); // Prevent Division-by-Zero, expand valid ray boundaries
         
-        if (d > 150.0) {
-            col = horizon * 0.5;
-        } else {
+        // GPU optimization loop: Skip rendering water geometry fully if engulfed in pure fog
+        if (d < 250.0) {
             vec3 p = ro + rd * d;
             
             bool doMicro = (d < 50.0);
@@ -855,7 +850,15 @@ void main() {
             float diffuseMoon = max(0.0, dot(N_smooth, waterMoonDir));
             waterCol += (vec3(0.02, 0.028, 0.05) + tidalColor * 0.15) * (diffuseMoon * 0.4) * trueNight;
             
-            col = mix(mix(horizon, waterCol, smoothstep(180.0, 5.0, d)), horizon * 0.5, smoothstep(30.0, 150.0, d) * trueNight * 0.6);
+            // SEAMLESS BLEND MATRIX:
+            // Calculate atmospheric fog attenuation correlating strictly with ray distance.
+            float fogFactor = smoothstep(40.0, 200.0, d);
+            
+            // Retain deep ocean aesthetic dynamically under night thresholds
+            waterCol -= waterCol * (trueNight * 0.25 * smoothstep(20.0, 100.0, d));
+            
+            // Finalize: Inject generated water color perfectly into pre-computed environmental sky boundary (`col`)
+            col = mix(waterCol, col, fogFactor);
         }
     }
 
@@ -1284,7 +1287,6 @@ void main() {
             if (drsCooldown > 0) drsCooldown--;
 
             // TELEMETRY: We start collecting data much earlier (frame 30 instead of 120).
-            // Because we start at Tier 1 (fast), if the phone is a flagship, it will quickly upgrade to Tier 2.
             if (totalFrames > 30 && !isTouching) { 
                 if (drsCount === DRS_HISTORY_SIZE) {
                     drsSum -= frameTimes[drsIndex];
