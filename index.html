@@ -950,10 +950,16 @@ void main() {
         syncUIWithConfig();
 
         let audioCtx, waterSource, waterFilter, waterGain;
-        let windSource, windFilter, windGain;
+        let windSource, windFilter, windGain, windLowpass, windFreqLFO, windFreqLFOGain;
         let ambientSource, ambientFilter, ambientGain;
         let nightSource, nightFilter, nightGain;
         let droneSource, droneOsc, droneGain, masterPanner;
+        
+        // Melodic generative variables
+        let melodyScale =[196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25]; // Cinematic Pentatonic
+        let nextNoteTime = 0;
+        let melodyDelay, melodyFeedback, melodyGain, melodyFilter;
+
         let audioInit = false, lastTouchTime = Date.now();
         let audioInitTimer = null, animFrameId = null;
         let currentDayFactor = 0.5, currentNightFactor = 0.5;
@@ -1035,18 +1041,63 @@ void main() {
                 waterGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 2.0);
             }, 0);
 
+            // CTO Directive: Complete Wind and Melodic Resonance Rework
             setTimeout(() => {
                 const windBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const windOut = windBuffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) { windOut[i] = (Math.random() * 2 - 1) * 0.5; }
+                let lastOutWind = 0;
+                for (let i = 0; i < bufferSize; i++) { 
+                    let white = Math.random() * 2 - 1; 
+                    windOut[i] = (lastOutWind + (0.02 * white)) / 1.02;
+                    lastOutWind = windOut[i];
+                    windOut[i] *= 3.5;
+                }
                 windSource = audioCtx.createBufferSource();
-                windSource.buffer = windBuffer; windSource.loop = true;
+                windSource.buffer = windBuffer; 
+                windSource.loop = true;
+
+                windLowpass = audioCtx.createBiquadFilter();
+                windLowpass.type = 'lowpass'; 
+                windLowpass.frequency.value = 1000;
+
                 windFilter = audioCtx.createBiquadFilter();
-                windFilter.type = 'bandpass'; windFilter.frequency.value = 800; windFilter.Q.value = 0.3;
-                windGain = audioCtx.createGain(); windGain.gain.value = 0.0;
-                windSource.connect(windFilter).connect(windGain).connect(audioDest);
+                windFilter.type = 'bandpass'; 
+                windFilter.frequency.value = 350; 
+                windFilter.Q.value = 1.8;
+
+                windFreqLFO = audioCtx.createOscillator();
+                windFreqLFO.type = 'sine';
+                windFreqLFO.frequency.value = 0.08; 
+
+                windFreqLFOGain = audioCtx.createGain();
+                windFreqLFOGain.gain.value = 150; 
+
+                windFreqLFO.connect(windFreqLFOGain).connect(windFilter.frequency);
+                windFreqLFO.start(0);
+
+                windGain = audioCtx.createGain(); 
+                windGain.gain.value = 0.0;
+
+                windSource.connect(windLowpass).connect(windFilter).connect(windGain).connect(audioDest);
+
+                const scale =[261.63, 349.23, 392.00, 523.25];
+                window.windResonators =[];
+                scale.forEach(freq => {
+                    let resFilter = audioCtx.createBiquadFilter();
+                    resFilter.type = 'bandpass';
+                    resFilter.frequency.value = freq;
+                    resFilter.Q.value = 45.0; 
+
+                    let resGain = audioCtx.createGain();
+                    resGain.gain.value = 0.05;
+
+                    windLowpass.connect(resFilter).connect(resGain).connect(windGain);
+                    window.windResonators.push({ filter: resFilter, gain: resGain, baseFreq: freq });
+                });
+
                 windSource.start(0);
-                windGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 2.5);
+                // Lowered initial target
+                windGain.gain.setTargetAtTime(0.015, audioCtx.currentTime, 2.5);
             }, 100);
 
             setTimeout(() => {
@@ -1080,6 +1131,73 @@ void main() {
                 droneOsc.start(0); droneOsc2.start(0); droneOsc3.start(0);
                 droneGain.gain.setTargetAtTime(0.03, audioCtx.currentTime, 3.0);
             }, 300);
+
+            // Melody Synth Architecture
+            setTimeout(() => {
+                melodyGain = audioCtx.createGain();
+                melodyGain.gain.value = 0.5;
+
+                melodyDelay = audioCtx.createDelay(5.0);
+                melodyDelay.delayTime.value = 0.85; 
+
+                melodyFeedback = audioCtx.createGain();
+                melodyFeedback.gain.value = 0.65; // High feedback for ethereal pad-like echo
+
+                melodyFilter = audioCtx.createBiquadFilter();
+                melodyFilter.type = "lowpass";
+                melodyFilter.frequency.value = 1200;
+
+                melodyDelay.connect(melodyFilter).connect(melodyFeedback).connect(melodyDelay);
+                melodyDelay.connect(melodyGain);
+                melodyGain.connect(audioDest);
+            }, 400);
+        }
+
+        // Generative Interaction Logic
+        function processMelody() {
+            if (!isW || isPaused || !audioCtx || audioCtx.state !== 'running' || !melodyGain) return;
+            
+            let ct = audioCtx.currentTime;
+            if (ct >= nextNoteTime) {
+                // Map Y to pitch (inverse mapping so high Y = high pitch)
+                let normY = Math.max(0.0, Math.min(1.0, (mY + 0.7) / 1.4));
+                let baseIndex = Math.floor((1.0 - normY) * (melodyScale.length - 1));
+                
+                let idx = Math.max(0, Math.min(melodyScale.length - 1, baseIndex + Math.floor(Math.random() * 3 - 1)));
+                let freq = melodyScale[idx];
+
+                if (Math.abs(mX) > 0.5 && Math.random() > 0.6) freq *= 2.0;
+
+                let osc1 = audioCtx.createOscillator();
+                let osc2 = audioCtx.createOscillator();
+                let env = audioCtx.createGain();
+
+                osc1.type = 'sine';
+                osc2.type = 'triangle';
+                osc1.frequency.value = freq;
+                osc2.frequency.value = freq * 1.003; 
+
+                env.gain.value = 0;
+                
+                let vel = 0.02 + Math.abs(mX) * 0.05;
+
+                env.gain.setValueAtTime(0, ct);
+                env.gain.linearRampToValueAtTime(vel, ct + 0.2); 
+                env.gain.exponentialRampToValueAtTime(0.0001, ct + 4.0); 
+
+                osc1.connect(env);
+                osc2.connect(env);
+                env.connect(melodyGain); 
+                env.connect(melodyDelay); 
+
+                osc1.start(ct); osc1.stop(ct + 4.5);
+                osc2.start(ct); osc2.stop(ct + 4.5);
+
+                // Determine rhythmic spacing via X axis
+                let speedFactor = 1.0 - (Math.abs(mX) * 0.6); // 1.0 down to 0.4
+                let timeDelta = (Math.random() * 1.5 + 0.5) * speedFactor;
+                nextNoteTime = ct + timeDelta;
+            }
         }
 
         function hideInteractionHint() {
@@ -1119,11 +1237,21 @@ void main() {
         window.addEventListener('pointercancel', () => { isTouching = false; }, { passive: true });
         window.addEventListener('blur', () => { isTouching = false; });
 
+        // CTO BUG FIX: Zero-stall Tab switching & accurate audio suspension
         document.addEventListener("visibilitychange", () => { 
             isPaused = document.hidden; 
             if (audioCtx) {
-                if (isPaused) audioCtx.suspend();
-                else audioCtx.resume();
+                if (isPaused) {
+                    audioCtx.suspend();
+                } else {
+                    audioCtx.resume();
+                }
+            }
+            if (!isPaused && gl) {
+                lastTime = performance.now();
+                lastTimeJS = lastTime; 
+                if (animFrameId) cancelAnimationFrame(animFrameId);
+                animFrameId = requestAnimationFrame(render);
             }
         });
 
@@ -1135,9 +1263,9 @@ void main() {
         function applyDRSTier() {
             let newDPR = currentDPR;
             if (isMobile) {
-                if (drsTier >= 2) newDPR = baseDPR; // Tier 2+ goes to native mobile resolution (1.0x)
-                else if (drsTier === 1) newDPR = Math.max(minDPR, baseDPR * 0.8); // Tier 1 starts smooth
-                else newDPR = minDPR; // Tier 0 fallback (0.6x)
+                if (drsTier >= 2) newDPR = baseDPR; 
+                else if (drsTier === 1) newDPR = Math.max(minDPR, baseDPR * 0.8); 
+                else newDPR = minDPR; 
             } else {
                 newDPR = baseDPR;
             }
@@ -1160,7 +1288,7 @@ void main() {
                 gl.useProgram(prg);
                 gl.uniform2f(uLocs.res, canvas.width, canvas.height);
             }
-            if (typeof render === "function" && gl) animFrameId = requestAnimationFrame(render);
+            if (typeof render === "function" && gl && !isPaused) animFrameId = requestAnimationFrame(render);
         }
 
         const compile = (t, s) => {
@@ -1239,7 +1367,7 @@ void main() {
             if (!isMobile && waterGain && audioCtx) {
                 let ct = audioCtx.currentTime;
                 waterGain.gain.cancelScheduledValues(ct); waterGain.gain.setValueAtTime(waterGain.gain.value, ct); waterGain.gain.linearRampToValueAtTime(0, ct + 1.5);
-                if (windGain) windGain.gain.linearRampToValueAtTime(0, ct + 1.5);
+                if (windGain) { windGain.gain.cancelScheduledValues(ct); windGain.gain.setValueAtTime(windGain.gain.value, ct); windGain.gain.linearRampToValueAtTime(0, ct + 1.5); }
                 if (ambientGain) ambientGain.gain.linearRampToValueAtTime(0, ct + 1.5);
                 if (nightGain) nightGain.gain.linearRampToValueAtTime(0, ct + 1.0);
                 if (droneGain) droneGain.gain.linearRampToValueAtTime(0, ct + 2.0);
@@ -1340,13 +1468,14 @@ void main() {
             if (isW) {
                 warp = Math.min(1.0, warp + (0.008 * dtFactor));
                 if (warp >= 1.0 && !redirected) { redirected = true; window.location.href = TARGET; }
-            } else if (!isMobile && audioInit && audioCtx && audioCtx.state === 'running') {
+            } else if (!isMobile && audioCtx && audioCtx.state === 'running') {
                 let waveCycle = Math.sin(waveTime * 0.3);
 
                 if (masterPanner && masterPanner.pan) {
                     let panTarget = Math.max(-1.0, Math.min(1.0, mX * 0.8));
                     masterPanner.pan.setTargetAtTime(panTarget, audioCtx.currentTime, 0.2);
                 }
+                
                 if (waterFilter && waterSource && waterGain) {
                     let targetWaterFreq = 250 + (waveCycle * 100) + (engineConfig.height * 600) - (mY * 150);
                     waterFilter.frequency.setTargetAtTime(Math.max(150, targetWaterFreq), audioCtx.currentTime, 0.1);
@@ -1355,28 +1484,54 @@ void main() {
                     let waterVol = 0.12 + currentDayFactor * 0.08;
                     waterGain.gain.setTargetAtTime(waterVol, audioCtx.currentTime, 0.3);
                 }
-                if (windFilter && windGain) {
-                    let windFreq = 600 + currentDayFactor * 600 + sunsetFactor * 400;
-                    windFilter.frequency.setTargetAtTime(windFreq, audioCtx.currentTime, 0.3);
-                    let windVol = 0.03 + currentDayFactor * 0.05 + sunsetFactor * 0.04;
+                
+                // NEW WIND MODULATION: Drastically lowered base volume.
+                if (windFilter && windGain && windFreqLFO && windFreqLFOGain) {
+                    let baseWindFreq = 300 + currentDayFactor * 150 + sunsetFactor * 100 - (mY * 100);
+                    windFilter.frequency.setTargetAtTime(baseWindFreq, audioCtx.currentTime, 0.5);
+                    
+                    let sweepRange = 120 + sunsetFactor * 80 + Math.abs(mX) * 150;
+                    windFreqLFOGain.gain.setTargetAtTime(sweepRange, audioCtx.currentTime, 0.5);
+                    
+                    let sweepSpeed = 0.05 + (engineConfig.energy * 0.01) + Math.abs(mX) * 0.06;
+                    windFreqLFO.frequency.setTargetAtTime(sweepSpeed, audioCtx.currentTime, 0.5);
+
+                    if (window.windResonators) {
+                        window.windResonators.forEach((res, i) => {
+                            let shift = Math.sin(waveTime * 0.2 + i) * 8.0 * mX; 
+                            res.filter.frequency.setTargetAtTime(res.baseFreq + shift, audioCtx.currentTime, 0.5);
+                            
+                            let lfoVolumeShift = (Math.sin(waveTime * sweepSpeed + i * 1.5) * 0.5 + 0.5);
+                            res.gain.gain.setTargetAtTime(0.02 + lfoVolumeShift * 0.04 * (1.0 + Math.abs(mX)), audioCtx.currentTime, 0.5);
+                        });
+                    }
+
+                    // CTO Fix: Massively reduced wind volume scalar
+                    let windVol = 0.015 + currentDayFactor * 0.01 + sunsetFactor * 0.01 + Math.abs(mY) * 0.01;
                     windGain.gain.setTargetAtTime(windVol, audioCtx.currentTime, 0.3);
                 }
+
                 if (ambientFilter && ambientGain) {
                     let ambientFreq = 1500 + currentDayFactor * 1000 - currentNightFactor * 500;
                     ambientFilter.frequency.setTargetAtTime(ambientFreq, audioCtx.currentTime, 0.5);
                     let ambientVol = 0.03 + currentDayFactor * 0.03 + sunsetFactor * 0.04;
                     ambientGain.gain.setTargetAtTime(ambientVol, audioCtx.currentTime, 0.3);
                 }
+                
                 if (nightFilter && nightGain) {
                     let nightVol = currentNightFactor * 0.12;
                     nightGain.gain.setTargetAtTime(nightVol, audioCtx.currentTime, 0.5);
                     let nightFreq = 300 + Math.abs(mY) * 150;
                     nightFilter.frequency.setTargetAtTime(nightFreq, audioCtx.currentTime, 0.3);
                 }
+                
                 if (droneGain) {
                     let droneVol = 0.02 + currentNightFactor * 0.04 + sunsetFactor * 0.02;
                     droneGain.gain.setTargetAtTime(droneVol, audioCtx.currentTime, 0.5);
                 }
+
+                // Generative Interactive Melody Execution
+                processMelody();
             }
 
             let startupFactor = Math.max(0.0, 1.0 - ((totalFrames || 1) / 120.0));
