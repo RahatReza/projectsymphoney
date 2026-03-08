@@ -563,14 +563,35 @@ float noise(vec2 p) {
     return mix(mix(hash(i), hash(i+vec2(1,0)), u.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
 }
 
-// 🌊 Physical Interactive Ripple Displacement matrix
-float rippleEnv(float dist, float timeDiff) {
-    float r = dist - timeDiff * 3.5;
-    float wave = sin(r * 15.0);
-    return wave * smoothstep(1.5, 0.0, abs(r)) * smoothstep(3.5, 0.0, timeDiff) * smoothstep(0.0, 0.5, dist) * 0.08;
+// 🌊 ANALYTICAL RIPPLE DERIVATIVE MATRIX (High-Precision, Isolated Speculars, 0 Finite Difference overhead)
+vec3 GetAnalyticalRipples(vec3 p) {
+    vec3 rData = vec3(0.0); // x: Height Offset, y: Gradient X, z: Gradient Z
+    for(int i = 0; i < 4; i++) {
+        float rt = u_time - u_ripples[i].z;
+        if(rt > 0.0 && rt < 3.5) {
+            vec2 diff = p.xz - u_ripples[i].xy;
+            float dist = length(diff);
+            if(dist > 0.001) {
+                float r = dist - rt * 3.5;
+                float env = smoothstep(1.5, 0.0, abs(r)) * smoothstep(3.5, 0.0, rt) * smoothstep(0.0, 0.5, dist) * 0.08;
+                float wave = sin(r * 15.0);
+                
+                // Add exact wave height
+                rData.x += wave * env; 
+                
+                // Chain rule analytical derivative: dH/dx = d(wave)/dr * dr/dx * env
+                float dWave = 15.0 * cos(r * 15.0) * env;
+                vec2 grad = dWave * (diff / dist);
+                
+                rData.y += grad.x;
+                rData.z += grad.y;
+            }
+        }
+    }
+    return rData;
 }
 
-// 🌊 FIX: NEVER return a flat plane. Even Tier 0 gets a highly optimized wave.
+// 🌊 BASE WATER HEIGHT (Strictly optimized base topology)
 float GetWaterHeight(vec3 p, bool micro) {
     float t = u_waveTime;
     vec2 uv = p.xz * 0.75;
@@ -611,16 +632,6 @@ float GetWaterHeight(vec3 p, bool micro) {
         vec2 uv1 = rotMicro * uv * 8.0;
         h += (noise(uv1 + t) * 0.5) * (u_waveHeight * 0.18) * u_detailFade * (1.0 - u_warmup);
     }
-
-    // INTERACTIVE MOBILE RIPPLES 
-    if (u_isMobile > 0.5) {
-        for(int i = 0; i < 4; i++) {
-            float rt = u_time - u_ripples[i].z;
-            if(rt > 0.0 && rt < 3.5) {
-                h += rippleEnv(length(p.xz - u_ripples[i].xy), rt);
-            }
-        }
-    }
     
     return h - (u_waveHeight * 0.5);
 }
@@ -637,7 +648,7 @@ vec3 GetNormal(vec3 p, bool micro) {
 }
 
 vec3 GetStars(vec3 rd, float nightFactor, bool isRef) {
-    if (u_drsTier < 0.5 && isRef) return vec3(0.0); // No ref stars on potato tier, but KEEP sky stars
+    if (u_drsTier < 0.5 && isRef) return vec3(0.0);
 
     vec3 starRd = isRef ? normalize(vec3(rd.x, abs(rd.y), rd.z)) : rd;
     vec2 starUV = vec2(atan(starRd.x, starRd.z) * 0.5, starRd.y);
@@ -826,14 +837,26 @@ void main() {
             col = horizon * 0.5;
         } else {
             vec3 p = ro + rd * d;
-            
             bool doMicro = (d < 50.0);
             
             float hOffset = GetWaterHeight(p, false);
             p += rd * (hOffset / max(abs(rd.y), 0.05));
             
             vec3 N_sharp = GetNormal(p, true);  
-            vec3 N_smooth = GetNormal(p, false);          
+            vec3 N_smooth = GetNormal(p, false);
+            float waveLocalH = GetWaterHeight(p, false);
+            
+            // 🔥 INJECT ANALYTICAL RIPPLES AND DERIVATIVE NORMALS
+            if (u_isMobile > 0.5) {
+                vec3 rippleData = GetAnalyticalRipples(p);
+                waveLocalH += rippleData.x;
+                
+                // 0.04 multiplier applies the exact epsilon gradient offset necessary for ultra-crisp reflection bending
+                vec3 rGrad = vec3(rippleData.y * 0.04, 0.0, rippleData.z * 0.04); 
+                N_sharp = normalize(N_sharp + rGrad);
+                N_smooth = normalize(N_smooth + rGrad * 0.5); 
+            }
+            
             vec3 N_spec = normalize(mix(N_smooth, N_sharp, 0.9)); 
             
             vec3 refR_Planar = reflect(rd, vec3(0, 1, 0)); 
@@ -850,7 +873,6 @@ void main() {
             }
 
             float fresnel = exp2(5.0 * log2(1.0 - max(0.0, dot(-rd, N_sharp)) + 0.0001));
-            float waveLocalH = GetWaterHeight(p, false);
             
             vec3 tidalColor = mix(u_waterColor * 0.2, u_waterColor * 2.2, smoothstep(-u_waveHeight, u_waveHeight * 1.5, waveLocalH));
             vec3 nightWater = mix(vec3(0.000, 0.001, 0.003) + tidalColor * 0.05, vec3(0.015, 0.035, 0.085) + tidalColor * 0.25, max(0.0, moonDir.y));
@@ -919,7 +941,7 @@ void main() {
         let drsSum = 0;
         
         let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.0) : Math.min(window.devicePixelRatio, 2.0);
-        let minDPR = isMobile ? 0.6 : baseDPR;
+        let minDPR = isMobile ? 0.5 : baseDPR;
         
         let currentDPR = isMobile ? baseDPR * 0.8 : baseDPR; 
         let lastTime = performance.now();
