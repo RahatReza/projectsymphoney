@@ -8,6 +8,10 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;400&display=swap');
 
+        /* 
+         * PIPELINE SEPARATION: 
+         * Canvas handles raw raymarcher buffer, CSS handles unscaled razor-sharp UI overlay.
+         */
         body, html {
             margin: 0; padding: 0; overflow: hidden; background: #000;
             font-family: 'Inter', sans-serif; cursor: none;
@@ -396,13 +400,11 @@ float noise(vec2 p) {
     return mix(mix(hash(i), hash(i+vec2(1,0)), u.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
 }
 
-// 🌊 DEPTH-AWARE LOD: FBM Octaves scale down sequentially based on distance (d)
 float GetWaterHeight(vec3 p, float d) {
     float t = u_waveTime;
     vec2 uv = p.xz * 0.75;
     float h = 0.0;
     
-    // 1. Base Wave (Always Evaluate)
     vec3 dots = mod(vec3(
         dot(uv, vec2(0.64018, 0.76822)) * 1.5 + t * 0.8,
         dot(uv, vec2(-0.78086, 0.62469)) * 2.8 - t * 1.2,
@@ -410,14 +412,12 @@ float GetWaterHeight(vec3 p, float d) {
     ), PI_2);
     vec3 sines = sin(dots) * 0.5 + 0.5;
     
-    // Warp-Gated Noise Check
     bool doNoise = (u_drsTier > 1.5 && d < 120.0 && u_warp < 0.2);
     float nVal = doNoise ? noise(uv * 0.3 + t * 0.1) * (1.0 - u_warmup) : 0.5;
     
     vec3 amps = vec3(1.5 * (0.85 + 0.3 * nVal), 0.8, 0.4) * u_waveHeight;
     h += dot(sines * sines, amps);
     
-    // 2. Mid-Distance Octave Gating
     if (u_drsTier > 0.5 && d < 180.0) {
         float fade2 = smoothstep(180.0, 120.0, d);
         vec2 dots2 = mod(vec2(
@@ -429,7 +429,6 @@ float GetWaterHeight(vec3 p, float d) {
         h += dot(sines2 * sines2, amps2) * fade2;
     }
 
-    // 3. Close-Up Micro-Detail Gating
     if (doNoise && u_drsTier > 2.5 && d < 60.0 && u_detailFade > 0.01) {
         float fade3 = smoothstep(60.0, 30.0, d) * u_detailFade;
         vec2 uv1 = rotMicro * uv * 8.0;
@@ -440,7 +439,6 @@ float GetWaterHeight(vec3 p, float d) {
 }
 
 vec3 GetNormal(vec3 p, float d) {
-    // 🌊 CONE-TRACING AA: Epsilon scales with distance to optically smooth distant normal gradients
     float eps = 0.02 * clamp(d * 0.02, 1.0, 10.0);
     vec2 e = vec2(eps, 0.0);
     float h = GetWaterHeight(p, d);
@@ -500,7 +498,6 @@ vec3 GetMeteors(vec3 rd, float nightFactor) {
     return meteorColor;
 }
 
-// ☁️ CONDITIONAL VOLUMETRIC SAMPLING: Heavy evaluation limits tied to warp-state & Mobile DRS
 float getClouds(vec3 rd, float t, bool isRef) {
     if (u_drsTier < 0.5 || u_warp > 0.5) return 0.0;
     if (isRef && u_isMobile > 0.5) return 0.0; 
@@ -623,7 +620,6 @@ void main() {
         float d = -(ro.y) / min(rd.y, -0.001); 
         float mistFade = smoothstep(80.0, 250.0, d);
         
-        // 🚀 HARD CUTOFF: Distant Volumetrics completely abort evaluating complex plane mathematics 
         if (mistFade > 0.99) {
             col = mix(horizon, vec3(0.0), trueNight * 0.3);
         } else {
@@ -633,7 +629,6 @@ void main() {
             p += rd * (hOffset / max(abs(rd.y), 0.05));
             float waveLocalH = GetWaterHeight(p, d);
             
-            // 🌊 MATERIAL LAYER GATING: Only execute finite difference normals up close
             vec3 N_smooth = GetNormal(p, d + 100.0); 
             vec3 N_sharp = N_smooth;
             if (d < 120.0 && u_warp < 0.2) {
@@ -644,12 +639,12 @@ void main() {
             vec3 refR_Planar = reflect(rd, N_smooth); 
             vec3 reflectedSky = mix(horizon, zenith, smoothstep(-0.2, 0.6, refR_Planar.y));
             
-            // ☁️ RAY REFLECTION CUTOFF: Culls ray-marching sky bounces on distant water entirely
             if (d < 150.0) {
                 if(trueNight > 0.05 && u_drsTier > 1.5) {
                     if (u_isMobile < 0.5 && u_warp < 0.3) reflectedSky += vec3(0.04, 0.015, 0.06) * texture(u_cloudLUT, refR_Planar.xz * 0.1).r * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
                     if (u_warp < 0.5) reflectedSky += GetStars(refR_Planar, trueNight, true);
                 }
+
                 if (u_drsTier > 2.5 && u_warp < 0.3) { 
                     float refCloudAlpha = getClouds(refR_Planar, u_time, true);
                     if(refCloudAlpha > 0.0) reflectedSky = mix(reflectedSky, getCloudColor(refR_Planar, sunDir), refCloudAlpha * 0.55);
@@ -695,32 +690,34 @@ void main() {
 }</script>
 
     <script>
-        // ENGINE CORE MODULE (Runs natively inside Web Worker OR Main Thread gracefully)
+        // ENGINE CORE MODULE
         function TidalEngineCore() {
             const ctx = this;
             let gl, prg, canvas, prgBlur, prgComp;
             let uLocs = {}, uLocsBlur = {}, uLocsComp = {}, cloudLUT;
             
-            // Framebuffer Render Targets
             let rtMain, rtBlurH, rtBlurV;
             let hasFloat = false, bloomThresh = 1.0;
             
-            // State
             let mX = 0, mY = 0.2, targetMX = 0, targetMY = 0.2;
             let warp = 0, waveTime = 0, detailFade = 1.0;
             let isW = false, isTouching = false, isMobile = false;
             let engineConfig = {};
             let totalFrames = 0, lastTime = performance.now(), isPaused = false;
             
-            // DRS & Telemetry State
             let drsTier = 4, drsCooldown = 0, drsIndex = 0, drsCount = 0, drsSum = 0;
             const DRS_HISTORY_SIZE = 60;
             const frameTimes = new Float32Array(DRS_HISTORY_SIZE);
             let mobileThermalLock = false, baseDPR = 1.0, currentDPR = 1.0;
 
+            // ZERO-ALLOCATION PRE-INITIALIZED STRUCTS
+            const stateMsg = { type: 'STATE', mX: 0, mY: 0, waveTime: 0, warp: 0, redirected: false };
+            const telMsg = { type: 'TELEMETRY', fps: 0, latency: 0, w: 0, h: 0, drsTier: 0, hdr: false };
+            const dprMsg = { type: 'DPR_CHANGE', dpr: 1.0 };
+
             function compile(t, s) {
                 const sh = gl.createShader(t); gl.shaderSource(sh, s); gl.compileShader(sh);
-                if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(sh)); return null; }
+                if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) return null;
                 return sh;
             }
 
@@ -749,8 +746,6 @@ void main() {
                     gl.deleteFramebuffer(rtBlurV.fb); gl.deleteTexture(rtBlurV.tex);
                 }
                 rtMain = createRenderTarget(w, h, hasFloat);
-                
-                // Quarter-res bloom downsampling buffers
                 let bw = Math.max(1, w >> 2); 
                 let bh = Math.max(1, h >> 2);
                 rtBlurH = createRenderTarget(bw, bh, hasFloat); 
@@ -759,11 +754,7 @@ void main() {
 
             function generateCloudLUT() {
                 const lutVs = '#version 300 es\nin vec4 p;void main(){gl_Position=p;}';
-                const lutFs = '#version 300 es\nprecision highp float;out vec4 c;\n' +
-                    'float hash(vec2 p){p=mod(p,512.0);return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}\n' +
-                    'float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),u.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x),u.y);}\n' +
-                    'void main(){vec2 uv=gl_FragCoord.xy/512.0;vec2 p=uv*24.0;float f=noise(p);f+=0.5*noise(p*2.0);f+=0.25*noise(p*4.0);f+=0.125*noise(p*8.0);c=vec4(vec3(f/1.875),1.0);}';
-                
+                const lutFs = '#version 300 es\nprecision highp float;out vec4 c;\nfloat hash(vec2 p){p=mod(p,512.0);return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}\nfloat noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),u.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x),u.y);}\nvoid main(){vec2 uv=gl_FragCoord.xy/512.0;vec2 p=uv*24.0;float f=noise(p);f+=0.5*noise(p*2.0);f+=0.25*noise(p*4.0);f+=0.125*noise(p*8.0);c=vec4(vec3(f/1.875),1.0);}';
                 const lutPrg = gl.createProgram();
                 gl.attachShader(lutPrg, compile(gl.VERTEX_SHADER, lutVs));
                 gl.attachShader(lutPrg, compile(gl.FRAGMENT_SHADER, lutFs));
@@ -807,38 +798,15 @@ void main() {
 
                 const vs = compile(gl.VERTEX_SHADER, '#version 300 es\nin vec4 p; out vec2 vUv; void main(){ vUv=p.xy*0.5+0.5; gl_Position=p; }');
                 
-                // MAIN SCENE
                 prg = gl.createProgram();
                 gl.attachShader(prg, vs); gl.attachShader(prg, compile(gl.FRAGMENT_SHADER, fsSource)); gl.linkProgram(prg);
                 
-                // BLUR PASS
                 prgBlur = gl.createProgram();
-                const fsBlur = `#version 300 es\nprecision highp float; in vec2 vUv; out vec4 fCol;
-                    uniform sampler2D tIn; uniform vec2 uDir; uniform float uFirst; uniform float uThresh;
-                    void main(){
-                        vec3 c=vec3(0.0);
-                        c += texture(tIn, vUv - 4.0*uDir).rgb * 0.05; c += texture(tIn, vUv - 3.0*uDir).rgb * 0.09;
-                        c += texture(tIn, vUv - 2.0*uDir).rgb * 0.12; c += texture(tIn, vUv - 1.0*uDir).rgb * 0.15;
-                        c += texture(tIn, vUv).rgb * 0.18;
-                        c += texture(tIn, vUv + 1.0*uDir).rgb * 0.15; c += texture(tIn, vUv + 2.0*uDir).rgb * 0.12;
-                        c += texture(tIn, vUv + 3.0*uDir).rgb * 0.09; c += texture(tIn, vUv + 4.0*uDir).rgb * 0.05;
-                        if(uFirst > 0.5) { float l=dot(c,vec3(0.299,0.587,0.114)); c*=smoothstep(uThresh, uThresh + 1.0, l); }
-                        fCol=vec4(c,1.0);
-                    }`;
+                const fsBlur = `#version 300 es\nprecision highp float; in vec2 vUv; out vec4 fCol;\nuniform sampler2D tIn; uniform vec2 uDir; uniform float uFirst; uniform float uThresh;\nvoid main(){ vec3 c=vec3(0.0); c += texture(tIn, vUv - 4.0*uDir).rgb * 0.05; c += texture(tIn, vUv - 3.0*uDir).rgb * 0.09; c += texture(tIn, vUv - 2.0*uDir).rgb * 0.12; c += texture(tIn, vUv - 1.0*uDir).rgb * 0.15; c += texture(tIn, vUv).rgb * 0.18; c += texture(tIn, vUv + 1.0*uDir).rgb * 0.15; c += texture(tIn, vUv + 2.0*uDir).rgb * 0.12; c += texture(tIn, vUv + 3.0*uDir).rgb * 0.09; c += texture(tIn, vUv + 4.0*uDir).rgb * 0.05; if(uFirst > 0.5) { float l=dot(c,vec3(0.299,0.587,0.114)); c*=smoothstep(uThresh, uThresh + 1.0, l); } fCol=vec4(c,1.0); }`;
                 gl.attachShader(prgBlur, vs); gl.attachShader(prgBlur, compile(gl.FRAGMENT_SHADER, fsBlur)); gl.linkProgram(prgBlur);
 
-                // COMPOSITE + ACES TONEMAPPING
                 prgComp = gl.createProgram();
-                const fsComp = `#version 300 es\nprecision highp float; in vec2 vUv; out vec4 fCol;
-                    uniform sampler2D tScene; uniform sampler2D tBloom; uniform float uWarp;
-                    vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }
-                    void main(){
-                        vec2 dir=vUv-0.5; float ca=uWarp*length(dir)*0.05;
-                        vec3 sc=vec3(texture(tScene, vUv+dir*ca).r, texture(tScene, vUv).g, texture(tScene, vUv-dir*ca).b);
-                        vec3 bl=texture(tBloom, vUv).rgb;
-                        vec3 hdr = sc + bl * 1.5;
-                        fCol=vec4(pow(aces(hdr),vec3(1.0/2.2)), 1.0);
-                    }`;
+                const fsComp = `#version 300 es\nprecision highp float; in vec2 vUv; out vec4 fCol;\nuniform sampler2D tScene; uniform sampler2D tBloom; uniform float uWarp;\nvec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }\nvoid main(){ vec2 dir=vUv-0.5; float ca=uWarp*length(dir)*0.05; vec3 sc=vec3(texture(tScene, vUv+dir*ca).r, texture(tScene, vUv).g, texture(tScene, vUv-dir*ca).b); vec3 bl=texture(tBloom, vUv).rgb; vec3 hdr = sc + bl * 1.5; fCol=vec4(pow(aces(hdr),vec3(1.0/2.2)), 1.0); }`;
                 gl.attachShader(prgComp, vs); gl.attachShader(prgComp, compile(gl.FRAGMENT_SHADER, fsComp)); gl.linkProgram(prgComp);
 
                 const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
@@ -874,13 +842,13 @@ void main() {
                 
                 if (Math.abs(newDPR - currentDPR) > 0.01) {
                     currentDPR = newDPR;
-                    ctx.postMessage({ type: 'DPR_CHANGE', dpr: currentDPR });
+                    dprMsg.dpr = currentDPR;
+                    ctx.postMessage(dprMsg);
                 }
             }
 
             function render(now) {
-                if (isPaused) { ctx.requestAnimationFrame(render); return; }
-                if (!rtMain) { ctx.requestAnimationFrame(render); return; } // Safely await resize
+                if (isPaused || !rtMain) { ctx.requestAnimationFrame(render); return; }
                 
                 totalFrames++; 
                 let elapsed = now - (lastTime || now);
@@ -908,11 +876,12 @@ void main() {
                     }
                 }
                 
-                // TELEMETRY BROADCAST
                 if (totalFrames % 30 === 0) {
-                    let calcFps = Math.round(1000 / (drsSum / DRS_HISTORY_SIZE || 16.666));
-                    let calcLat = Math.round(elapsed * 10) / 10;
-                    ctx.postMessage({ type: 'TELEMETRY', fps: calcFps, latency: calcLat, w: rtMain.w, h: rtMain.h, drsTier, hdr: hasFloat });
+                    telMsg.fps = Math.round(1000 / (drsSum / DRS_HISTORY_SIZE || 16.666));
+                    telMsg.latency = Math.round(elapsed * 10) / 10;
+                    telMsg.w = rtMain.w; telMsg.h = rtMain.h; 
+                    telMsg.drsTier = drsTier; telMsg.hdr = hasFloat;
+                    ctx.postMessage(telMsg);
                 }
 
                 if (isW) warp = Math.min(1.0, warp + (0.008 * dtFactor));
@@ -953,7 +922,9 @@ void main() {
                 gl.uniform1f(uLocsComp.uWarp, warp);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-                ctx.postMessage({ type: 'STATE', mX, mY, waveTime, warp, redirected: (warp >= 1.0) });
+                stateMsg.mX = mX; stateMsg.mY = mY; stateMsg.waveTime = waveTime; 
+                stateMsg.warp = warp; stateMsg.redirected = (warp >= 1.0);
+                ctx.postMessage(stateMsg);
                 ctx.requestAnimationFrame(render);
             }
 
@@ -998,6 +969,9 @@ void main() {
         let currentDPR = baseDPR;
         let redirected = false;
 
+        // ZERO-ALLOCATION PRE-INITIALIZED STRUCT
+        const syncMsg = { type: 'SYNC', mX: 0, mY: 0, isW: false, isTouching: false, engineConfig: engineConfig };
+
         class MockWorker {
             constructor(workerFn) {
                 const scope = { requestAnimationFrame: window.requestAnimationFrame.bind(window), performance: window.performance };
@@ -1023,17 +997,18 @@ void main() {
             }
 
             engine.onmessage = (e) => {
-                if (e.data.type === 'DPR_CHANGE') {
-                    currentDPR = e.data.dpr; triggerResize();
-                } else if (e.data.type === 'STATE') {
-                    updateAudioLogic(e.data.mX, e.data.mY, e.data.waveTime, e.data.warp);
-                    if (e.data.redirected && !redirected) { redirected = true; window.location.href = TARGET; }
-                } else if (e.data.type === 'TELEMETRY') {
-                    document.getElementById('tel-fps').innerText = e.data.fps;
-                    document.getElementById('tel-lat').innerText = e.data.latency + 'ms';
-                    document.getElementById('tel-res').innerText = e.data.w + 'x' + e.data.h;
-                    document.getElementById('tel-hdr').innerText = e.data.hdr ? 'ON (16F)' : 'OFF (8B)';
-                    document.getElementById('tel-drs').innerText = 'T' + e.data.drsTier;
+                const data = e.data;
+                if (data.type === 'DPR_CHANGE') {
+                    currentDPR = data.dpr; triggerResize();
+                } else if (data.type === 'STATE') {
+                    updateAudioLogic(data.mX, data.mY, data.waveTime, data.warp);
+                    if (data.redirected && !redirected) { redirected = true; window.location.href = TARGET; }
+                } else if (data.type === 'TELEMETRY') {
+                    document.getElementById('tel-fps').innerText = data.fps;
+                    document.getElementById('tel-lat').innerText = data.latency + 'ms';
+                    document.getElementById('tel-res').innerText = data.w + 'x' + data.h;
+                    document.getElementById('tel-hdr').innerText = data.hdr ? 'ON (16F)' : 'OFF (8B)';
+                    document.getElementById('tel-drs').innerText = 'T' + data.drsTier;
                 }
             };
         }
@@ -1046,7 +1021,11 @@ void main() {
         window.addEventListener('resize', triggerResize);
         triggerResize();
 
-        function syncEngine() { engine.postMessage({ type: 'SYNC', mX, mY, isW, isTouching, engineConfig }); }
+        function syncEngine() { 
+            syncMsg.mX = mX; syncMsg.mY = mY; syncMsg.isW = isW; 
+            syncMsg.isTouching = isTouching; syncMsg.engineConfig = engineConfig;
+            engine.postMessage(syncMsg); 
+        }
 
         // ----------------------------------------------------------------------
         // AUDIO GRAPH
@@ -1257,7 +1236,6 @@ void main() {
             });
         });
 
-        // Keybind Overrides
         window.addEventListener('keydown', (e) => { 
             if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); document.getElementById('auth-modal').style.display = 'flex'; document.getElementById('auth-input').value = ''; document.getElementById('auth-input').focus(); } 
             if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'h') { 
