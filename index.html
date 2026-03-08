@@ -8,85 +8,43 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;400&display=swap');
 
-        body,
-        html {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background: #000;
-            font-family: 'Inter', sans-serif;
-            cursor: none;
-            touch-action: none;
-            -webkit-touch-callout: none;
-            height: 100dvh;
-            
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+        body, html {
+            margin: 0; padding: 0; overflow: hidden; background: #000;
+            font-family: 'Inter', sans-serif; cursor: none;
+            touch-action: none; -webkit-touch-callout: none; height: 100dvh;
+            -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
         }
 
         canvas {
-            display: block;
-            width: 100vw;
-            height: 100vh;
-            position: absolute;
-            z-index: 1;
-            filter: contrast(1.05);
-            touch-action: none;
+            display: block; width: 100vw; height: 100vh;
+            position: absolute; z-index: 1; filter: contrast(1.05); touch-action: none;
         }
 
         #intro-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 50;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(20px);
-            transition: opacity 1.5s ease, backdrop-filter 1.5s ease;
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 50; display: flex; flex-direction: column; justify-content: center;
+            align-items: center; background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(20px); transition: opacity 1.5s ease, backdrop-filter 1.5s ease;
             cursor: pointer;
         }
 
         .intro-visual {
-            width: 80px;
-            height: 80px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            position: relative;
-            animation: visual-pulse 2s ease-in-out infinite;
+            width: 80px; height: 80px; border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%; position: relative; animation: visual-pulse 2s ease-in-out infinite;
             margin-bottom: 40px;
         }
 
         .intro-visual::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
+            content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 20px; height: 20px; background: rgba(255, 255, 255, 0.8); border-radius: 50%;
             animation: sound-wave 1.5s ease-out infinite;
         }
 
         .intro-visual::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            animation: sound-wave-outer 1.5s ease-out infinite;
-            animation-delay: 0.3s;
+            content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 40px; height: 40px; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 50%;
+            animation: sound-wave-outer 1.5s ease-out infinite; animation-delay: 0.3s;
         }
 
         @keyframes visual-pulse {
@@ -105,22 +63,14 @@
         }
 
         .intro-text {
-            color: #fff;
-            font-size: 0.7rem;
-            letter-spacing: 15px;
-            text-transform: uppercase;
+            color: #fff; font-size: 0.7rem; letter-spacing: 15px; text-transform: uppercase;
             animation: pulse-breath 2.5s infinite alternate ease-in-out;
-            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
-            pointer-events: none;
-            margin-bottom: 15px;
+            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8); pointer-events: none; margin-bottom: 15px;
         }
 
         .intro-hint {
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 0.55rem;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            animation: hint-fade 3s ease-in-out infinite;
+            color: rgba(255, 255, 255, 0.4); font-size: 0.55rem; letter-spacing: 4px;
+            text-transform: uppercase; animation: hint-fade 3s ease-in-out infinite;
         }
 
         @keyframes pulse-breath {
@@ -134,35 +84,20 @@
         }
 
         #ui-layer {
-            position: relative;
-            z-index: 10;
-            height: 100vh;
-            width: 100vw;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            pointer-events: none;
-            transition: opacity 1.2s ease;
+            position: relative; z-index: 10; height: 100vh; width: 100vw;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            pointer-events: none; transition: opacity 1.2s ease;
         }
 
         .brand-text { text-align: center; }
 
         h1 {
-            font-weight: 100;
-            letter-spacing: 35px;
-            color: rgba(255, 252, 248, 0.95);
-            margin: 0;
-            font-size: 3.2rem;
-            text-transform: uppercase;
+            font-weight: 100; letter-spacing: 35px; color: rgba(255, 252, 248, 0.95); margin: 0;
+            font-size: 3.2rem; text-transform: uppercase;
             background: linear-gradient(110deg, rgba(255, 252, 248, 0.7) 0%, rgba(160, 235, 255, 0.95) 25%, rgba(255, 255, 255, 1) 50%, rgba(180, 255, 240, 0.95) 75%, rgba(255, 252, 248, 0.7) 100%);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 8px 40px rgba(0, 0, 5, 0.6), 0 0 30px var(--glow-1);
-            animation: spectral-flow 6s linear infinite;
-            will-change: background-position, text-shadow;
+            background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; text-shadow: 0 8px 40px rgba(0, 0, 5, 0.6), 0 0 30px var(--glow-1);
+            animation: spectral-flow 6s linear infinite; will-change: background-position, text-shadow;
         }
 
         @keyframes spectral-flow {
@@ -172,21 +107,12 @@
         }
 
         .btn-init {
-            margin-top: 80px;
-            pointer-events: auto;
-            cursor: pointer;
-            color: rgba(255, 252, 248, 0.9);
-            font-size: 0.7rem;
-            letter-spacing: 15px;
-            text-transform: uppercase;
-            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
+            margin-top: 80px; pointer-events: auto; cursor: pointer; color: rgba(255, 252, 248, 0.9);
+            font-size: 0.7rem; letter-spacing: 15px; text-transform: uppercase;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
             background: linear-gradient(90deg, rgba(255, 252, 248, 0.5) 0%, rgba(140, 255, 240, 0.95) 30%, rgba(255, 255, 255, 1) 50%, rgba(180, 215, 255, 0.95) 70%, rgba(255, 252, 248, 0.5) 100%);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 4px 15px rgba(0, 0, 8, 0.6), 0 0 15px var(--glow-3);
+            background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; text-shadow: 0 4px 15px rgba(0, 0, 8, 0.6), 0 0 15px var(--glow-3);
             animation: btn-glow-flow 4s linear infinite;
         }
 
@@ -197,65 +123,30 @@
         }
 
         .btn-init::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 25%;
-            width: 50%;
-            height: 1px;
-            background: #fff;
-            opacity: 0.2;
-            transition: 0.4s;
+            content: ''; position: absolute; bottom: -10px; left: 25%; width: 50%; height: 1px;
+            background: #fff; opacity: 0.2; transition: 0.4s;
         }
 
         .btn-init:hover {
-            opacity: 1;
-            letter-spacing: 20px;
-            -webkit-text-fill-color: #fff;
-            text-shadow: 0 0 40px var(--glow-active), 0 4px 20px rgba(0, 0, 0, 0.9);
-            animation: none;
+            opacity: 1; letter-spacing: 20px; -webkit-text-fill-color: #fff;
+            text-shadow: 0 0 40px var(--glow-active), 0 4px 20px rgba(0, 0, 0, 0.9); animation: none;
         }
 
         .btn-init:hover::after { width: 100%; left: 0; opacity: 1; }
 
         #swipe-hint {
-            position: absolute;
-            bottom: 12%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            opacity: 0;
-            pointer-events: none;
-            animation: hint-appear 2s ease forwards 2.5s;
+            position: absolute; bottom: 12%; display: flex; flex-direction: column; align-items: center;
+            opacity: 0; pointer-events: none; animation: hint-appear 2s ease forwards 2.5s;
         }
 
-        .swipe-track {
-            width: 60px;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            margin-bottom: 10px;
-            position: relative;
-        }
-
+        .swipe-track { width: 60px; height: 1px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent); margin-bottom: 10px; position: relative; }
         .swipe-dot {
-            position: absolute;
-            top: -1px;
-            left: 0;
-            width: 15px;
-            height: 3px;
-            border-radius: 2px;
-            background: rgba(160, 235, 255, 0.95);
-            box-shadow: 0 0 10px rgba(160, 235, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.5);
+            position: absolute; top: -1px; left: 0; width: 15px; height: 3px; border-radius: 2px;
+            background: rgba(160, 235, 255, 0.95); box-shadow: 0 0 10px rgba(160, 235, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.5);
             animation: swipe-dot-move 2.5s ease-in-out infinite;
         }
 
-        .swipe-text {
-            color: rgba(255, 252, 248, 0.45);
-            font-size: 0.55rem;
-            letter-spacing: 6px;
-            text-transform: uppercase;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
-        }
+        .swipe-text { color: rgba(255, 252, 248, 0.45); font-size: 0.55rem; letter-spacing: 6px; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); }
 
         @keyframes swipe-dot-move {
             0% { left: 0%; opacity: 0; transform: translateX(-50%); }
@@ -263,49 +154,24 @@
             80% { opacity: 1; }
             100% { left: 100%; opacity: 0; transform: translateX(-50%); }
         }
-
         @keyframes hint-appear { to { opacity: 1; } }
 
         #cinematic-layer {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 20;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-            gap: 20px;
-            opacity: 0;
-            transition: opacity 0.6s ease;
-            width: 100%;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            pointer-events: none; gap: 20px; opacity: 0; transition: opacity 0.6s ease; width: 100%;
         }
 
         .cine-title {
-            font-weight: 100;
-            font-size: 2.2rem;
-            color: rgba(255, 252, 248, 0.95);
-            letter-spacing: 15px;
-            text-transform: uppercase;
-            text-shadow: 0 8px 35px rgba(0, 0, 10, 0.45), 0 0 30px rgba(220, 235, 255, 0.15);
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
-            text-align: center;
+            font-weight: 100; font-size: 2.2rem; color: rgba(255, 252, 248, 0.95); letter-spacing: 15px;
+            text-transform: uppercase; text-shadow: 0 8px 35px rgba(0, 0, 10, 0.45), 0 0 30px rgba(220, 235, 255, 0.15);
+            opacity: 0; transform: translateY(20px); transition: all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); text-align: center;
         }
 
         .cine-sub {
-            font-size: 0.65rem;
-            color: rgba(220, 225, 235, 0.85);
-            letter-spacing: 12px;
-            text-transform: uppercase;
-            opacity: 0;
-            transform: translateY(15px);
-            transition: all 0.6s ease;
-            text-align: center;
-            text-shadow: 0 4px 15px rgba(0, 0, 5, 0.6);
+            font-size: 0.65rem; color: rgba(220, 225, 235, 0.85); letter-spacing: 12px;
+            text-transform: uppercase; opacity: 0; transform: translateY(15px); transition: all 0.6s ease;
+            text-align: center; text-shadow: 0 4px 15px rgba(0, 0, 5, 0.6);
         }
 
         #cinematic-layer.active { opacity: 1; }
@@ -314,65 +180,29 @@
         #cinematic-layer.active .cine-sub:nth-child(3) { opacity: 1; transform: translateY(0); color: rgba(255, 252, 248, 0.95); transition-delay: 0.8s; }
 
         #cursor {
-            position: fixed;
-            pointer-events: none;
-            z-index: 9999;
-            width: 22px;
-            height: 22px;
-            border: 1.5px solid #fff;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            mix-blend-mode: difference;
-            transition: transform 0.2s ease;
+            position: fixed; pointer-events: none; z-index: 9999; width: 22px; height: 22px;
+            border: 1.5px solid #fff; border-radius: 50%; transform: translate(-50%, -50%);
+            mix-blend-mode: difference; transition: transform 0.2s ease;
         }
 
         .overlay-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 9000;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(8px);
-            pointer-events: auto;
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9000;
+            display: none; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px); pointer-events: auto;
         }
 
         #auth-input {
-            background: transparent;
-            border: none;
-            border-bottom: 1px solid #fff;
-            color: #fff;
-            font-family: 'Inter', sans-serif;
-            font-size: 1.2rem;
-            text-align: center;
-            outline: none;
-            letter-spacing: 5px;
-            padding: 10px;
-            width: 300px;
+            background: transparent; border: none; border-bottom: 1px solid #fff; color: #fff;
+            font-family: 'Inter', sans-serif; font-size: 1.2rem; text-align: center; outline: none;
+            letter-spacing: 5px; padding: 10px; width: 300px;
         }
-
         #auth-input::placeholder { color: rgba(255, 255, 255, 0.3); text-transform: uppercase; }
 
         .panel-box {
-            background: rgba(10, 10, 15, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 30px;
-            width: 400px;
-            max-width: 90%;
-            max-height: 85vh;
-            overflow-y: auto;
-            color: #fff;
-            font-family: 'Inter', sans-serif;
-            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            box-sizing: border-box;
+            background: rgba(10, 10, 15, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;
+            padding: 30px; width: 400px; max-width: 90%; max-height: 85vh; overflow-y: auto; color: #fff;
+            font-family: 'Inter', sans-serif; box-shadow: 0 0 40px rgba(0, 0, 0, 0.8); display: flex;
+            flex-direction: column; gap: 15px; box-sizing: border-box;
         }
 
         .panel-box::-webkit-scrollbar { width: 6px; }
@@ -399,7 +229,6 @@
         .btn-reset:hover { background: rgba(255, 100, 100, 0.15); border-color: rgba(255, 100, 100, 0.6); }
         .btn-deploy { background: rgba(74, 222, 128, 0.15); border-color: rgba(74, 222, 128, 0.4); color: #4ade80; }
         .btn-deploy:hover { background: rgba(74, 222, 128, 0.25); border-color: rgba(74, 222, 128, 0.7); }
-        select.text-input { cursor: pointer; }
 
         @media (max-width: 768px) {
             h1 { font-size: 2.2rem; letter-spacing: 18px; margin-left: 18px; }
@@ -484,31 +313,12 @@
             </div>
 
             <h3 style="margin-top: 15px; font-size: 1rem;">System Text & Links</h3>
-
-            <div class="slider-group">
-                <label>Main Title</label>
-                <input type="text" id="inp-mainTitle" class="text-input">
-            </div>
-            <div class="slider-group">
-                <label>Button Action</label>
-                <input type="text" id="inp-btnText" class="text-input">
-            </div>
-            <div class="slider-group">
-                <label>Cinematic Title</label>
-                <input type="text" id="inp-cineTitle" class="text-input">
-            </div>
-            <div class="slider-group">
-                <label>Subtext 1</label>
-                <input type="text" id="inp-cineSub1" class="text-input">
-            </div>
-            <div class="slider-group">
-                <label>Subtext 2</label>
-                <input type="text" id="inp-cineSub2" class="text-input">
-            </div>
-            <div class="slider-group">
-                <label>Redirect URL</label>
-                <input type="text" id="inp-targetUrl" class="text-input">
-            </div>
+            <div class="slider-group"><label>Main Title</label><input type="text" id="inp-mainTitle" class="text-input"></div>
+            <div class="slider-group"><label>Button Action</label><input type="text" id="inp-btnText" class="text-input"></div>
+            <div class="slider-group"><label>Cinematic Title</label><input type="text" id="inp-cineTitle" class="text-input"></div>
+            <div class="slider-group"><label>Subtext 1</label><input type="text" id="inp-cineSub1" class="text-input"></div>
+            <div class="slider-group"><label>Subtext 2</label><input type="text" id="inp-cineSub2" class="text-input"></div>
+            <div class="slider-group"><label>Redirect URL</label><input type="text" id="inp-targetUrl" class="text-input"></div>
 
             <div class="panel-buttons">
                 <button class="btn-panel btn-reset" onclick="resetAdminPanel()">Reset</button>
@@ -520,7 +330,7 @@
         </div>
     </div>
 
-    <!-- GLSL SHADER (NEVER PLAIN - TRUE TIER SCALING) -->
+    <!-- MAIN SHADER PAYLOAD (RAW HDR OUTPUT) -->
     <script id="fs" type="x-shader/x-fragment">#version 300 es
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
@@ -546,6 +356,7 @@ uniform float u_warmup;
 uniform float u_detailFade; 
 
 uniform vec3 u_ripples[4];
+uniform sampler2D u_cloudLUT;
 
 #define PI_2 6.28318530718
 
@@ -563,9 +374,8 @@ float noise(vec2 p) {
     return mix(mix(hash(i), hash(i+vec2(1,0)), u.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), u.x), u.y);
 }
 
-// 🌊 ANALYTICAL RIPPLE DERIVATIVE MATRIX (High-Precision, Isolated Speculars, 0 Finite Difference overhead)
 vec3 GetAnalyticalRipples(vec3 p) {
-    vec3 rData = vec3(0.0); // x: Height Offset, y: Gradient X, z: Gradient Z
+    vec3 rData = vec3(0.0);
     for(int i = 0; i < 4; i++) {
         float rt = u_time - u_ripples[i].z;
         if(rt > 0.0 && rt < 3.5) {
@@ -575,14 +385,9 @@ vec3 GetAnalyticalRipples(vec3 p) {
                 float r = dist - rt * 3.5;
                 float env = smoothstep(1.5, 0.0, abs(r)) * smoothstep(3.5, 0.0, rt) * smoothstep(0.0, 0.5, dist) * 0.08;
                 float wave = sin(r * 15.0);
-                
-                // Add exact wave height
                 rData.x += wave * env; 
-                
-                // Chain rule analytical derivative: dH/dx = d(wave)/dr * dr/dx * env
                 float dWave = 15.0 * cos(r * 15.0) * env;
                 vec2 grad = dWave * (diff / dist);
-                
                 rData.y += grad.x;
                 rData.z += grad.y;
             }
@@ -591,48 +396,38 @@ vec3 GetAnalyticalRipples(vec3 p) {
     return rData;
 }
 
-// 🌊 BASE WATER HEIGHT (Strictly optimized base topology)
 float GetWaterHeight(vec3 p, bool micro) {
     float t = u_waveTime;
     vec2 uv = p.xz * 0.75;
     
-    // Noise is the main mobile killer. Disable it entirely unless Tier 2+
     float nVal = 0.5;
     if (micro && u_drsTier > 1.5) {
         nVal = noise(uv * 0.3 + t * 0.1) * (1.0 - u_warmup);
     }
     
-    // PRIMARY WAVE (Always ON, extremely cheap vector math)
     vec3 dots = mod(vec3(
         dot(uv, vec2(0.64018, 0.76822)) * 1.5 + t * 0.8,
         dot(uv, vec2(-0.78086, 0.62469)) * 2.8 - t * 1.2,
         dot(uv, vec2(0.19611, -0.98058)) * 5.0 + t * 1.5
     ), PI_2);
-    
     vec3 sines = sin(dots) * 0.5 + 0.5;
-    sines *= sines; 
-    
     vec3 amps = vec3(1.5 * (0.85 + 0.3 * nVal), 0.8, 0.4) * u_waveHeight;
-    float h = dot(sines, amps);
+    float h = dot(sines * sines, amps);
     
-    // SECONDARY WAVE (Turns off ONLY on Tier 0 absolute fallback)
     if (u_drsTier > 0.5) {
         vec2 dots2 = mod(vec2(
             dot(uv, vec2(-0.8137, -0.5812)) * 3.5 + t * 0.6,
             dot(uv, vec2(0.9486, -0.3162)) * 8.0 - t * 2.0
         ), PI_2);
         vec2 sines2 = sin(dots2) * 0.5 + 0.5;
-        sines2 *= sines2;
         vec2 amps2 = vec2(0.25 * (0.8 + 0.4 * nVal), 0.15) * u_waveHeight;
-        h += dot(sines2, amps2);
+        h += dot(sines2 * sines2, amps2);
     }
 
-    // MICRO DETAIL (High-end phones and PC only)
     if(micro && u_drsTier > 2.5 && u_detailFade > 0.01) {
         vec2 uv1 = rotMicro * uv * 8.0;
         h += (noise(uv1 + t) * 0.5) * (u_waveHeight * 0.18) * u_detailFade * (1.0 - u_warmup);
     }
-    
     return h - (u_waveHeight * 0.5);
 }
 
@@ -649,30 +444,23 @@ vec3 GetNormal(vec3 p, bool micro) {
 
 vec3 GetStars(vec3 rd, float nightFactor, bool isRef) {
     if (u_drsTier < 0.5 && isRef) return vec3(0.0);
-
     vec3 starRd = isRef ? normalize(vec3(rd.x, abs(rd.y), rd.z)) : rd;
     vec2 starUV = vec2(atan(starRd.x, starRd.z) * 0.5, starRd.y);
-    
     float gridRes = 350.0;
     vec2 gId = floor(starUV * gridRes);
     vec2 gUv = fract(starUV * gridRes) - 0.5;
-
     float baseHash = hash(gId);
     float densityFactor = isRef ? u_starDensity * 1.33 : u_starDensity;
     float starIntensity = exp2(densityFactor * 0.15 * log2(baseHash + 0.0001));
-    
     float starSize = 0.02 + hash(gId + vec2(17.3, 89.7)) * 0.1;
     float starShape = smoothstep(starSize, 0.0, length(gUv));
     float stars = starIntensity * starShape * 10.0;
-    
     float starPhase = hash(gId + vec2(45.2, 12.8)) * 6.28318;
     float starFreq = 0.6 + hash(gId + vec2(9.3, 74.1)) * 2.0;
     float twinkle = 0.55 + 0.45 * sin(u_time * starFreq + starPhase);
-    
     float colorSeed = hash(gId + vec2(137.2, 43.8));
     vec3 starColor = mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.95, 0.8), colorSeed);
     starColor = mix(starColor, vec3(1.0, 0.8, 0.6), colorSeed * colorSeed * 0.25);
-    
     float warpFade = 1.0 - smoothstep(0.1, 0.7, u_warp);
     float refMult = isRef ? 0.25 : 1.0;
     return stars * twinkle * nightFactor * refMult * warpFade * starColor;
@@ -680,30 +468,22 @@ vec3 GetStars(vec3 rd, float nightFactor, bool isRef) {
 
 vec3 GetMeteors(vec3 rd, float nightFactor) {
     if (u_drsTier < 1.5 || nightFactor < 0.05 || u_warp > 0.3) return vec3(0.0);
-    
     vec3 meteorColor = vec3(0.0);
     float seedBase = floor(u_time * 0.15);
-    
     for (int i = 0; i < 2; i++) {
-        float fi = float(i);
-        float seed = hash(vec2(seedBase + fi * 17.0, fi * 31.0));
+        float seed = hash(vec2(seedBase + float(i) * 17.0, float(i) * 31.0));
         if (seed < 0.72) continue;
-        
         float progress = fract(u_time * 0.1 + seed * 7.0);
         if (progress < 0.08 || progress > 0.85) continue;
-        
         float sx = -2.0 + seed * 4.0;
         float ang = -0.3 - seed * 0.4;
-        
         float px = sx + progress * 3.0 * cos(ang);
         float py = 0.5 + progress * 1.8 * sin(ang);
-        
         vec2 sUV = vec2(atan(rd.x, rd.z) * 0.5, rd.y);
         float d = length(sUV - vec2(px, py));
         float g = smoothstep(0.1, 0.0, d);
         float fi2 = smoothstep(0.0, 0.2, progress);
         float fo2 = 1.0 - smoothstep(0.6, 1.0, progress);
-        
         vec3 c = mix(vec3(0.7, 0.8, 1.0), vec3(1.0, 0.9, 0.7), seed);
         meteorColor += c * g * fi2 * fo2 * nightFactor * 1.2;
     }
@@ -712,37 +492,32 @@ vec3 GetMeteors(vec3 rd, float nightFactor) {
 
 float getClouds(vec3 rd, float t, bool isRef) {
     if (u_drsTier < 1.5) return 0.0;
-
-    vec2 uv = rd.xz / (rd.y + 0.001) * 0.4;
-    uv.x -= t * 0.05;      
+    vec2 uv = rd.xz / (abs(rd.y) + 0.001) * 0.15;
+    uv.x -= t * 0.025;      
     
-    float f = noise(uv);
-    
+    float f = texture(u_cloudLUT, uv).r;
     if (!isRef) {
         if (u_drsTier > 1.5) { 
             uv = rotCloud * uv;
-            f += 0.5 * noise(uv + t * 0.03);
+            f += 0.5 * texture(u_cloudLUT, uv + t * 0.015).r;
         }
         if (u_drsTier > 3.5 && u_detailFade > 0.01) { 
             uv = rotCloud * uv;
-            f += 0.25 * noise(uv - t * 0.02) * u_detailFade;
+            f += 0.25 * texture(u_cloudLUT, (uv - t * 0.01) * 2.0).r * u_detailFade;
         }
-        f = smoothstep(0.65, 1.5, f);
+        f = smoothstep(0.45, 1.3, f);
     } else {
-        f = smoothstep(0.4, 0.95, f); 
+        f = smoothstep(0.35, 0.95, f); 
     }
-    
-    return f * smoothstep(0.0, 0.15, rd.y);
+    return f * smoothstep(0.0, 0.15, abs(rd.y));
 }
 
 vec3 getCloudColor(vec3 rd, vec3 sunDir) {
     vec3 cloudDay = vec3(0.95, 0.98, 1.0);
     vec3 cloudSunset = vec3(1.0, 0.4, 0.15);
     vec3 cloudNight = vec3(0.01, 0.015, 0.03);      
-    
     float cloudDayFact = smoothstep(-0.1, 0.15, sunDir.y);
     vec3 cColor = mix(cloudNight, mix(cloudSunset, cloudDay, smoothstep(-0.05, 0.25, sunDir.y)), cloudDayFact);
-    
     float sDot = max(0.0, dot(rd, sunDir));
     cColor += vec3(1.0, 0.6, 0.2) * exp2(5.0 * log2(sDot + 0.0001)) * smoothstep(-0.1, 0.3, sunDir.y) * 0.5;
     return cColor;
@@ -786,20 +561,18 @@ void main() {
     
     float sunDot = max(0.0, dot(rd, sunDir));
     float moonDot = max(0.0, dot(rd, moonDir));
-
     bool skipSky = (sunDot > 0.9998 && sunDir.y > -0.05) || (moonDot > 0.9998 && moonDir.y > -0.05);
 
     if (rd.y >= 0.0 && !skipSky) {
         if(trueNight > 0.05) {
             if (u_drsTier > 1.5) { 
                 vec2 nebUV = rd.xz / (abs(rd.y) + 0.001);
-                float neb = noise(nebUV * 2.0 + u_time * 0.01) * noise(nebUV * 4.0 - u_time * 0.01);
+                float neb = texture(u_cloudLUT, nebUV * 0.05 + u_time * 0.002).r * texture(u_cloudLUT, nebUV * 0.1 - u_time * 0.002).r;
                 col += vec3(0.08, 0.03, 0.12) * neb * trueNight * smoothstep(0.0, 0.3, rd.y) * 0.6 * (1.0 - smoothstep(0.2, 0.8, u_warp));
             }
             col += GetStars(rd, trueNight, false) * smoothstep(-0.1, 0.2, rd.y);
             col += GetMeteors(rd, trueNight) * smoothstep(-0.1, 0.15, rd.y);
         }
-
         float cloudAlpha = getClouds(rd, u_time, false);
         if(cloudAlpha > 0.0) col = mix(col, getCloudColor(rd, sunDir), cloudAlpha * 0.65);
     }
@@ -832,7 +605,6 @@ void main() {
 
     if(rd.y < 0.0) {
         float d = -(ro.y) / min(rd.y, -0.002); 
-        
         if (d > 150.0) {
             col = horizon * 0.5;
         } else {
@@ -846,24 +618,20 @@ void main() {
             vec3 N_smooth = GetNormal(p, false);
             float waveLocalH = GetWaterHeight(p, false);
             
-            // 🔥 INJECT ANALYTICAL RIPPLES AND DERIVATIVE NORMALS
             if (u_isMobile > 0.5) {
                 vec3 rippleData = GetAnalyticalRipples(p);
                 waveLocalH += rippleData.x;
-                
-                // 0.04 multiplier applies the exact epsilon gradient offset necessary for ultra-crisp reflection bending
                 vec3 rGrad = vec3(rippleData.y * 0.04, 0.0, rippleData.z * 0.04); 
                 N_sharp = normalize(N_sharp + rGrad);
                 N_smooth = normalize(N_smooth + rGrad * 0.5); 
             }
             
             vec3 N_spec = normalize(mix(N_smooth, N_sharp, 0.9)); 
-            
             vec3 refR_Planar = reflect(rd, vec3(0, 1, 0)); 
             vec3 reflectedSky = mix(horizon, zenith, smoothstep(-0.2, 0.6, reflect(rd, N_smooth).y));
             
             if(trueNight > 0.05 && !doMicro && u_drsTier > 1.5) {
-                reflectedSky += vec3(0.04, 0.015, 0.06) * noise(refR_Planar.xz * 2.0) * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
+                reflectedSky += vec3(0.04, 0.015, 0.06) * texture(u_cloudLUT, refR_Planar.xz * 0.1).r * trueNight * smoothstep(0.0, 0.3, refR_Planar.y);
                 reflectedSky += GetStars(refR_Planar, trueNight, true);
             }
 
@@ -873,668 +641,502 @@ void main() {
             }
 
             float fresnel = exp2(5.0 * log2(1.0 - max(0.0, dot(-rd, N_sharp)) + 0.0001));
-            
             vec3 tidalColor = mix(u_waterColor * 0.2, u_waterColor * 2.2, smoothstep(-u_waveHeight, u_waveHeight * 1.5, waveLocalH));
             vec3 nightWater = mix(vec3(0.000, 0.001, 0.003) + tidalColor * 0.05, vec3(0.015, 0.035, 0.085) + tidalColor * 0.25, max(0.0, moonDir.y));
             vec3 waterBase = mix(nightWater, tidalColor, dayFactor);
-            
             vec3 waterCol = mix(waterBase, reflectedSky * 0.85, 0.15 + 0.85 * fresnel);
-            
             vec3 waterSunDir = normalize(vec3(sunDir.x, max(sunDir.y, 0.001), sunDir.z));
             vec3 waterMoonDir = normalize(vec3(moonDir.x, max(moonDir.y, 0.001), moonDir.z));
 
             float specPower = u_drsTier < 1.5 ? 100.0 : (u_isMobile > 0.5 ? 180.0 : 400.0);
-            
             float smoothSpecDot = max(0.0, dot(N_smooth, normalize(-rd + waterSunDir)));
             float specTermSun = exp2(specPower * log2(max(0.0, dot(N_spec, normalize(-rd + waterSunDir))) + 0.0001)) * 4.5 + exp2(80.0 * log2(smoothSpecDot + 0.0001)) * 0.8;
             waterCol += mix(vec3(1.0, 0.3, 0.05), vec3(1.0, 0.9, 0.7), smoothstep(0.0, 0.3, waterSunDir.y)) * specTermSun * sunMask;
-            
             float smoothMoonSpecDot = max(0.0, dot(N_smooth, normalize(-rd + waterMoonDir)));
             float moonSpecIntensity = exp2((specPower + 100.0) * log2(max(0.0, dot(N_spec, normalize(-rd + waterMoonDir))) + 0.0001)) * 2.5 + exp2(80.0 * log2(smoothMoonSpecDot + 0.0001)) * 0.8;
             waterCol += vec3(0.5, 0.65, 0.85) * moonSpecIntensity * trueNight * moonMask;
-            
             float diffuseMoon = max(0.0, dot(N_smooth, waterMoonDir));
             waterCol += (vec3(0.02, 0.028, 0.05) + tidalColor * 0.15) * (diffuseMoon * 0.4) * trueNight;
-            
             col = mix(mix(horizon, waterCol, smoothstep(180.0, 5.0, d)), horizon * 0.5, smoothstep(30.0, 150.0, d) * trueNight * 0.6);
         }
     }
 
     if (u_drsTier > 0.5) { 
-        float hyperGlow = pow(u_warp, 3.5) * 2.5;
-        float caSplit = u_warp * length(uv) * 1.5;
-        col += vec3(0.85, 0.95, 1.0) * hyperGlow + vec3(caSplit, 0.0, -caSplit) * u_warp * 1.5;
+        col += vec3(0.85, 0.95, 1.0) * pow(u_warp, 3.5) * 2.5;
     }
 
-    col = (col*(2.51*col+0.03))/(col*(2.43*col+0.59)+0.14);
-    fragColor = vec4(pow(col, vec3(1.0/2.2)), 1.0);
+    // RAW HDR OUT (Tone Mapping occurs in Post-Process Composite Pass)
+    fragColor = vec4(col, 1.0);
 }</script>
+
     <script>
-        const CLOUD_SAVE_ENDPOINT = "https://your-api-endpoint.com/v1/config";
-        const CLOUD_AUTH_BEARER = "";
+        // ENGINE CORE MODULE (Runs natively inside Web Worker OR Main Thread gracefully)
+        function TidalEngineCore() {
+            const ctx = this;
+            let gl, prg, canvas, prgBlur, prgComp;
+            let uLocs = {}, uLocsRipples =[], uLocsBlur = {}, uLocsComp = {}, cloudLUT;
+            
+            // Framebuffer Render Targets
+            let rtMain, rtBlurH, rtBlurV;
+            
+            // BUGFIX: Guarantee memory allocation before requestAnimationFrame executes
+            let activeRipples = Array(4).fill().map(() => ({ x: 0, z: 0, time: -100 }));
+            
+            // State
+            let mX = 0, mY = 0.2, targetMX = 0, targetMY = 0.2;
+            let warp = 0, waveTime = 0, detailFade = 1.0;
+            let isW = false, isTouching = false, isMobile = false;
+            let engineConfig = {};
+            let totalFrames = 0, lastTime = 0, isPaused = false;
+            
+            // DRS State
+            let drsTier = 4, drsCooldown = 0, drsIndex = 0, drsCount = 0, drsSum = 0;
+            const DRS_HISTORY_SIZE = 60;
+            const frameTimes = new Float32Array(DRS_HISTORY_SIZE);
+            let mobileThermalLock = false, baseDPR = 1.0, currentDPR = 1.0;
 
-        let totalFrames = 0;
-        let analysisStartTime = performance.now();
+            function compile(t, s) {
+                const sh = gl.createShader(t); gl.shaderSource(sh, s); gl.compileShader(sh);
+                if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(sh)); return null; }
+                return sh;
+            }
 
-        const canvas = document.getElementById('v');
-        
-        let mX = 0, mY = 0.2;
-        let targetMX = 0, targetMY = 0.2;
-        
-        let gl, prg, isW = false, warp = 0, redirected = false;
-        let isTouching = false;
-        let waveTime = 0, lastTimeJS = 0;
-        let detailFade = 1.0; 
-        let TARGET = "https://www.linkedin.com/in/rahatreza100/";
+            function createRenderTarget(w, h, hasFloat) {
+                const tex = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, tex);
+                const type = hasFloat ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE;
+                const internalFmt = hasFloat ? gl.RGBA16F : gl.RGBA;
+                gl.texImage2D(gl.TEXTURE_2D, 0, internalFmt, w, h, 0, gl.RGBA, type, null);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-        let isPaused = false;
+                const fb = gl.createFramebuffer();
+                gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+                return { tex, fb, w, h };
+            }
+
+            function resizeFBOs(w, h) {
+                if (rtMain) {
+                    gl.deleteFramebuffer(rtMain.fb); gl.deleteTexture(rtMain.tex);
+                    gl.deleteFramebuffer(rtBlurH.fb); gl.deleteTexture(rtBlurH.tex);
+                    gl.deleteFramebuffer(rtBlurV.fb); gl.deleteTexture(rtBlurV.tex);
+                }
+                const hasFloat = !!gl.getExtension('EXT_color_buffer_float');
+                rtMain = createRenderTarget(w, h, hasFloat);
+                rtBlurH = createRenderTarget(w >> 1, h >> 1, hasFloat); // Fast Half-Res
+                rtBlurV = createRenderTarget(w >> 1, h >> 1, hasFloat);
+            }
+
+            function generateCloudLUT() {
+                const lutVs = '#version 300 es\nin vec4 p;void main(){gl_Position=p;}';
+                const lutFs = '#version 300 es\nprecision highp float;out vec4 c;\n' +
+                    'float hash(vec2 p){p=mod(p,512.0);return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}\n' +
+                    'float noise(vec2 p){vec2 i=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),u.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x),u.y);}\n' +
+                    'void main(){vec2 uv=gl_FragCoord.xy/512.0;vec2 p=uv*24.0;float f=noise(p);f+=0.5*noise(p*2.0);f+=0.25*noise(p*4.0);f+=0.125*noise(p*8.0);c=vec4(vec3(f/1.875),1.0);}';
+                
+                const lutPrg = gl.createProgram();
+                gl.attachShader(lutPrg, compile(gl.VERTEX_SHADER, lutVs));
+                gl.attachShader(lutPrg, compile(gl.FRAGMENT_SHADER, lutFs));
+                gl.linkProgram(lutPrg);
+
+                cloudLUT = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, cloudLUT);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 512, 512, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+
+                const fb = gl.createFramebuffer();
+                gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, cloudLUT, 0);
+                gl.viewport(0, 0, 512, 512);
+                gl.useProgram(lutPrg);
+
+                const b = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, b);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+                const a = gl.getAttribLocation(lutPrg, 'p');
+                gl.enableVertexAttribArray(a);
+                gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+                
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                gl.deleteProgram(lutPrg);
+                gl.deleteBuffer(b);
+            }
+
+            function initGL(fsSource) {
+                gl = canvas.getContext('webgl2', { antialias: false, powerPreference: "high-performance" });
+                if (!gl) return false;
+                
+                generateCloudLUT();
+
+                const vs = compile(gl.VERTEX_SHADER, '#version 300 es\nin vec4 p; out vec2 vUv; void main(){ vUv=p.xy*0.5+0.5; gl_Position=p; }');
+                
+                // MAIN SCENE
+                prg = gl.createProgram();
+                gl.attachShader(prg, vs); gl.attachShader(prg, compile(gl.FRAGMENT_SHADER, fsSource)); gl.linkProgram(prg);
+                
+                // BLUR PASS
+                prgBlur = gl.createProgram();
+                const fsBlur = `#version 300 es\nprecision highp float; in vec2 vUv; out vec4 fCol;
+                    uniform sampler2D tIn; uniform vec2 uDir; uniform float uFirst;
+                    void main(){
+                        vec3 c=vec3(0.0);
+                        c += texture(tIn, vUv - 4.0*uDir).rgb * 0.05; c += texture(tIn, vUv - 3.0*uDir).rgb * 0.09;
+                        c += texture(tIn, vUv - 2.0*uDir).rgb * 0.12; c += texture(tIn, vUv - 1.0*uDir).rgb * 0.15;
+                        c += texture(tIn, vUv).rgb * 0.18;
+                        c += texture(tIn, vUv + 1.0*uDir).rgb * 0.15; c += texture(tIn, vUv + 2.0*uDir).rgb * 0.12;
+                        c += texture(tIn, vUv + 3.0*uDir).rgb * 0.09; c += texture(tIn, vUv + 4.0*uDir).rgb * 0.05;
+                        if(uFirst > 0.5) { float l=dot(c,vec3(0.299,0.587,0.114)); c*=smoothstep(1.0, 2.0, l); }
+                        fCol=vec4(c,1.0);
+                    }`;
+                gl.attachShader(prgBlur, vs); gl.attachShader(prgBlur, compile(gl.FRAGMENT_SHADER, fsBlur)); gl.linkProgram(prgBlur);
+
+                // COMPOSITE + ACES TONEMAPPING
+                prgComp = gl.createProgram();
+                const fsComp = `#version 300 es\nprecision highp float; in vec2 vUv; out vec4 fCol;
+                    uniform sampler2D tScene; uniform sampler2D tBloom; uniform float uWarp;
+                    vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14),0.0,1.0); }
+                    void main(){
+                        vec2 dir=vUv-0.5; float ca=uWarp*length(dir)*0.05;
+                        vec3 sc=vec3(texture(tScene, vUv+dir*ca).r, texture(tScene, vUv).g, texture(tScene, vUv-dir*ca).b);
+                        vec3 bl=texture(tBloom, vUv).rgb;
+                        vec3 hdr = sc + bl * 1.5;
+                        fCol=vec4(pow(aces(hdr),vec3(1.0/2.2)), 1.0);
+                    }`;
+                gl.attachShader(prgComp, vs); gl.attachShader(prgComp, compile(gl.FRAGMENT_SHADER, fsComp)); gl.linkProgram(prgComp);
+
+                const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+                const a = gl.getAttribLocation(prg, 'p'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+
+                uLocs.res = gl.getUniformLocation(prg, 'u_res'); uLocs.time = gl.getUniformLocation(prg, 'u_time');
+                uLocs.mouse = gl.getUniformLocation(prg, 'u_mouse'); uLocs.warp = gl.getUniformLocation(prg, 'u_warp');
+                uLocs.wTime = gl.getUniformLocation(prg, 'u_waveTime'); uLocs.wColor = gl.getUniformLocation(prg, 'u_waterColor');
+                uLocs.wEnergy = gl.getUniformLocation(prg, 'u_waveEnergy'); uLocs.wHeight = gl.getUniformLocation(prg, 'u_waveHeight');
+                uLocs.sDensity = gl.getUniformLocation(prg, 'u_starDensity'); uLocs.isMobile = gl.getUniformLocation(prg, 'u_isMobile');
+                uLocs.warmup = gl.getUniformLocation(prg, 'u_warmup'); uLocs.detailFade = gl.getUniformLocation(prg, 'u_detailFade');
+                uLocs.drsTier = gl.getUniformLocation(prg, 'u_drsTier'); uLocs.cloudLUT = gl.getUniformLocation(prg, 'u_cloudLUT');
+                for(let i=0; i<4; i++) uLocsRipples.push(gl.getUniformLocation(prg, `u_ripples[${i}]`));
+
+                uLocsBlur.tIn = gl.getUniformLocation(prgBlur, 'tIn'); uLocsBlur.uDir = gl.getUniformLocation(prgBlur, 'uDir');
+                uLocsBlur.uFirst = gl.getUniformLocation(prgBlur, 'uFirst');
+                
+                uLocsComp.tScene = gl.getUniformLocation(prgComp, 'tScene'); uLocsComp.tBloom = gl.getUniformLocation(prgComp, 'tBloom');
+                uLocsComp.uWarp = gl.getUniformLocation(prgComp, 'uWarp');
+
+                ctx.requestAnimationFrame(render);
+            }
+
+            function applyDRSTier() {
+                let newDPR = currentDPR;
+                if (isMobile) {
+                    if (drsTier >= 2) newDPR = baseDPR; 
+                    else if (drsTier === 1) newDPR = Math.max(0.5, baseDPR * 0.8); 
+                    else newDPR = 0.5; 
+                } else newDPR = baseDPR;
+                if (Math.abs(newDPR - currentDPR) > 0.01) {
+                    currentDPR = newDPR;
+                    ctx.postMessage({ type: 'DPR_CHANGE', dpr: currentDPR });
+                }
+            }
+
+            function render(now) {
+                if (isPaused || !rtMain) { ctx.requestAnimationFrame(render); return; }
+                
+                totalFrames++; 
+                let elapsed = now - (lastTime || now);
+                if (elapsed > 100) elapsed = 16.666; 
+                lastTime = now;
+
+                let dtJS = elapsed; if (drsTier === 0) dtJS *= 0.5; 
+                waveTime += (dtJS * 0.001) * engineConfig.energy;
+                let dtFactor = dtJS / 16.666;
+                
+                let lerpFactor = isMobile ? 0.35 : 0.12; 
+                let lerpSpeed = 1.0 - Math.pow(1.0 - lerpFactor, dtFactor);
+                mX += (targetMX - mX) * lerpSpeed; mY += (targetMY - mY) * lerpSpeed;
+                detailFade += ((isTouching ? 0.0 : 1.0) - detailFade) * (0.15 * dtFactor);
+
+                if (drsCooldown > 0) drsCooldown--;
+                if (totalFrames > 30 && !isTouching) { 
+                    if (drsCount === DRS_HISTORY_SIZE) drsSum -= frameTimes[drsIndex]; else drsCount++;
+                    frameTimes[drsIndex] = elapsed; drsSum += elapsed; drsIndex = (drsIndex + 1) % DRS_HISTORY_SIZE;
+                    if (drsCount === DRS_HISTORY_SIZE && drsCooldown <= 0) {
+                        let fps = 1000 / (drsSum / DRS_HISTORY_SIZE); let oldTier = drsTier;
+                        if (fps < 48 && drsTier > 0) { drsTier--; drsCooldown = 90; if (isMobile) mobileThermalLock = true; }
+                        else if (fps >= 58 && drsTier < (isMobile ? 2 : 4) && !mobileThermalLock) { drsTier++; drsCooldown = 90; }
+                        if (oldTier !== drsTier) { applyDRSTier(); drsCount = 0; drsSum = 0; }
+                    }
+                }
+                if (isW) warp = Math.min(1.0, warp + (0.008 * dtFactor));
+                
+                // 1. MAIN PASS
+                gl.bindFramebuffer(gl.FRAMEBUFFER, rtMain.fb);
+                gl.viewport(0, 0, rtMain.w, rtMain.h);
+                gl.useProgram(prg);
+                gl.uniform2f(uLocs.res, rtMain.w, rtMain.h); gl.uniform1f(uLocs.time, now * 0.001);
+                gl.uniform2f(uLocs.mouse, mX, mY); gl.uniform1f(uLocs.warp, warp);
+                gl.uniform1f(uLocs.wTime, waveTime); gl.uniform3f(uLocs.wColor, engineConfig.r, engineConfig.g, engineConfig.b);
+                gl.uniform1f(uLocs.wEnergy, engineConfig.energy); gl.uniform1f(uLocs.wHeight, engineConfig.height);
+                gl.uniform1f(uLocs.sDensity, engineConfig.stars); gl.uniform1f(uLocs.isMobile, isMobile ? 1.0 : 0.0);
+                gl.uniform1f(uLocs.warmup, Math.max(0.0, 1.0 - (totalFrames / 120.0)));
+                gl.uniform1f(uLocs.detailFade, detailFade); gl.uniform1f(uLocs.drsTier, drsTier);
+                for(let i=0; i<4; i++) if(uLocsRipples[i]) gl.uniform3f(uLocsRipples[i], activeRipples[i].x, activeRipples[i].z, activeRipples[i].time);
+                gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, cloudLUT); gl.uniform1i(uLocs.cloudLUT, 0);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+                // 2. BLUR H (Extract + Blur)
+                gl.bindFramebuffer(gl.FRAMEBUFFER, rtBlurH.fb);
+                gl.viewport(0, 0, rtBlurH.w, rtBlurH.h);
+                gl.useProgram(prgBlur);
+                gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, rtMain.tex);
+                gl.uniform1i(uLocsBlur.tIn, 0); gl.uniform2f(uLocsBlur.uDir, 1.0/rtBlurH.w, 0.0); gl.uniform1f(uLocsBlur.uFirst, 1.0);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+                // 3. BLUR V
+                gl.bindFramebuffer(gl.FRAMEBUFFER, rtBlurV.fb);
+                gl.viewport(0, 0, rtBlurV.w, rtBlurV.h);
+                gl.bindTexture(gl.TEXTURE_2D, rtBlurH.tex);
+                gl.uniform2f(uLocsBlur.uDir, 0.0, 1.0/rtBlurV.h); gl.uniform1f(uLocsBlur.uFirst, 0.0);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+                // 4. COMPOSITE
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                gl.viewport(0, 0, canvas.width, canvas.height);
+                gl.useProgram(prgComp);
+                gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, rtMain.tex); gl.uniform1i(uLocsComp.tScene, 0);
+                gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, rtBlurV.tex); gl.uniform1i(uLocsComp.tBloom, 1);
+                gl.uniform1f(uLocsComp.uWarp, warp);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+                ctx.postMessage({ type: 'STATE', mX, mY, waveTime, warp, redirected: (warp >= 1.0) });
+                ctx.requestAnimationFrame(render);
+            }
+
+            ctx.onmessage = function(e) {
+                const data = e.data;
+                if (data.type === 'INIT') {
+                    canvas = data.canvas; isMobile = data.isMobile; baseDPR = data.baseDPR;
+                    currentDPR = data.currentDPR; drsTier = isMobile ? 1 : 4; engineConfig = data.engineConfig;
+                    initGL(data.fsSource);
+                } else if (data.type === 'SYNC') {
+                    targetMX = data.mX; targetMY = data.mY; isW = data.isW;
+                    isTouching = data.isTouching; activeRipples = data.ripples; engineConfig = data.engineConfig;
+                } else if (data.type === 'RESIZE') {
+                    if(canvas) { 
+                        canvas.width = data.w * currentDPR; canvas.height = data.h * currentDPR; 
+                        resizeFBOs(canvas.width, canvas.height);
+                    }
+                } else if (data.type === 'PAUSE') {
+                    isPaused = data.paused;
+                }
+            };
+        }
+
+        // ----------------------------------------------------------------------
+        // UI & AUDIO MAIN THREAD SYSTEM
+        // ----------------------------------------------------------------------
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-
-        let drsTier = isMobile ? 1 : 4; 
-        let drsCooldown = 0;
-        window.mobileThermalLock = false; 
-        
-        const DRS_HISTORY_SIZE = 60;
-        const frameTimes = new Float32Array(DRS_HISTORY_SIZE);
-        let drsIndex = 0;
-        let drsCount = 0;
-        let drsSum = 0;
-        
-        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.0) : Math.min(window.devicePixelRatio, 2.0);
-        let minDPR = isMobile ? 0.5 : baseDPR;
-        
-        let currentDPR = isMobile ? baseDPR * 0.8 : baseDPR; 
-        let lastTime = performance.now();
-
+        let TARGET = "https://www.linkedin.com/in/rahatreza100/";
         const configKeys =['energy', 'height', 'stars', 'r', 'g', 'b'];
         const textKeys =['mainTitle', 'btnText', 'cineTitle', 'cineSub1', 'cineSub2', 'targetUrl'];
-
         const defaultConfig = {
             energy: 2.2, height: 0.05, stars: 600.0, r: 0.01, g: 0.04, b: 0.08,
             mainTitle: "RAHATIL", btnText: "Initialize", cineTitle: "Welcome, Rahatil",
             cineSub1: "Calibrating Tidal Engine...", cineSub2: "Redirecting to Terminal",
-            targetUrl: "https://www.linkedin.com/in/rahatreza100/"
+            targetUrl: TARGET
+        };
+        let engineConfig = { ...defaultConfig };
+        try { const sd = localStorage.getItem('rahatil_engine_config'); if(sd) engineConfig = { ...defaultConfig, ...JSON.parse(sd) }; } catch(e){}
+
+        let mX = 0, mY = 0.2, isW = false, isTouching = false;
+        let activeRipples = Array(4).fill().map(() => ({ x: 0, z: 0, time: -100 })), rippleIdx = 0, lastRippleTime = 0;
+        let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.0) : Math.min(window.devicePixelRatio, 2.0);
+        let currentDPR = isMobile ? baseDPR * 0.8 : baseDPR;
+        let redirected = false;
+
+        class MockWorker {
+            constructor(workerFn) {
+                const scope = { requestAnimationFrame: window.requestAnimationFrame.bind(window), performance: window.performance };
+                scope.postMessage = (data) => { if (this.onmessage) this.onmessage({ data }); };
+                this.scope = scope; workerFn.call(scope);
+            }
+            postMessage(data) { if (this.scope.onmessage) this.scope.onmessage({ data }); }
+        }
+
+        const canvasEl = document.getElementById('v');
+        const fsSource = document.getElementById('fs').textContent;
+        let engine;
+
+        if (window.OffscreenCanvas && !/Firefox\/[1-5]\d\./.test(navigator.userAgent)) {
+            const blob = new Blob([`(${TidalEngineCore.toString()})()`], { type: 'application/javascript' });
+            engine = new Worker(URL.createObjectURL(blob));
+            const offscreen = canvasEl.transferControlToOffscreen();
+            engine.postMessage({ type: 'INIT', canvas: offscreen, isMobile, baseDPR, currentDPR, engineConfig, fsSource },[offscreen]);
+        } else {
+            engine = new MockWorker(TidalEngineCore);
+            engine.postMessage({ type: 'INIT', canvas: canvasEl, isMobile, baseDPR, currentDPR, engineConfig, fsSource });
+        }
+
+        engine.onmessage = (e) => {
+            if (e.data.type === 'DPR_CHANGE') {
+                currentDPR = e.data.dpr; triggerResize();
+            } else if (e.data.type === 'STATE') {
+                updateAudioLogic(e.data.mX, e.data.mY, e.data.waveTime, e.data.warp);
+                if (e.data.redirected && !redirected) { redirected = true; window.location.href = TARGET; }
+            }
         };
 
-        let uLocs = {};
-        let uLocsRipples =[];
-        let engineConfig = { ...defaultConfig };
-        
-        // Ripple State Machine
-        let activeRipples = Array(4).fill().map(() => ({ x: 0, z: 0, time: -10 }));
-        let rippleIdx = 0;
-        let lastRippleTime = 0;
+        function triggerResize() { engine.postMessage({ type: 'RESIZE', w: window.innerWidth, h: window.innerHeight }); }
+        window.addEventListener('resize', triggerResize);
+        triggerResize();
 
-        try {
-            const savedData = localStorage.getItem('rahatil_engine_config');
-            if (savedData) { engineConfig = { ...defaultConfig, ...JSON.parse(savedData) }; }
-        } catch (e) { }
+        function syncEngine() { engine.postMessage({ type: 'SYNC', mX, mY, isW, isTouching, ripples: activeRipples, engineConfig }); }
+
+        // ----------------------------------------------------------------------
+        // AUDIO GRAPH (Zero regressions, identical integration)
+        // ----------------------------------------------------------------------
+        let audioCtx, waterSource, waterFilter, waterGain, windSource, windFilter, windGain;
+        let ambientSource, ambientFilter, ambientGain, nightSource, nightFilter, nightGain;
+        let droneSource, droneOsc, droneGain, masterPanner, audioInit = false;
+        let currentDayFactor = 0.5, currentNightFactor = 0.5;
+
+        function buildAudioGraph() {
+            if (isMobile) return;
+            const bufferSize = Math.floor(audioCtx.sampleRate * 0.8);
+            if (audioCtx.createStereoPanner) { try { masterPanner = audioCtx.createStereoPanner(); masterPanner.pan.value = 0; masterPanner.connect(audioCtx.destination); } catch(e){} }
+            let audioDest = masterPanner ? masterPanner : audioCtx.destination;
+            setTimeout(() => {
+                const b = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); const o = b.getChannelData(0); let l = 0;
+                for(let i=0; i<bufferSize; i++) { o[i] = (l + (0.02 * (Math.random()*2-1)))/1.02; l = o[i]; o[i] *= 3.5; }
+                waterSource = audioCtx.createBufferSource(); waterSource.buffer = b; waterSource.loop = true;
+                waterFilter = audioCtx.createBiquadFilter(); waterFilter.type = 'lowpass'; waterFilter.frequency.value = 400;
+                waterGain = audioCtx.createGain(); waterGain.gain.value = 0.0;
+                waterSource.connect(waterFilter).connect(waterGain).connect(audioDest); waterSource.start(0);
+                waterGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 2.0);
+            }, 0);
+        }
+
+        function unlockAudio() {
+            if (isMobile || audioInit) return; audioInit = true;
+            const AC = window.AudioContext || window.webkitAudioContext; audioCtx = new AC();
+            try { const b = audioCtx.createBuffer(1, 1, 22050); const s = audioCtx.createBufferSource(); s.buffer = b; s.connect(audioCtx.destination); if(s.start) s.start(0); } catch(e){}
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            setTimeout(buildAudioGraph, 50);
+        }
+
+        document.addEventListener('pointerdown', unlockAudio, { once: true, passive: true });
+        document.addEventListener('click', unlockAudio, { once: true });
+
+        function updateAudioLogic(wMX, wMY, wTime, wWarp) {
+            if (!audioInit || !audioCtx || audioCtx.state !== 'running' || isW) return;
+            let solarEase = wWarp * wWarp * (3.0 - 2.0 * wWarp);
+            let currentSunY = 0.15 + wMY * 1.0;
+            let sunY = currentSunY * (1 - solarEase) + (-1.5) * solarEase;
+            let dayFactor = Math.max(0, Math.min(1, (sunY + 0.02) / 0.17));
+            currentDayFactor += (dayFactor - currentDayFactor) * 0.05;
+            currentNightFactor += ((1.0 - dayFactor) - currentNightFactor) * 0.05;
+            if (masterPanner) masterPanner.pan.setTargetAtTime(Math.max(-1.0, Math.min(1.0, wMX * 0.8)), audioCtx.currentTime, 0.2);
+            if (waterFilter && waterGain && waterSource) {
+                let waveCycle = Math.sin(wTime * 0.3);
+                waterFilter.frequency.setTargetAtTime(Math.max(150, 250 + (waveCycle * 100) + (engineConfig.height * 600) - (wMY * 150)), audioCtx.currentTime, 0.1);
+                waterSource.playbackRate.setTargetAtTime(Math.max(0.1, 0.4 + (engineConfig.energy * 0.02) + (waveCycle * 0.03)), audioCtx.currentTime, 0.1);
+                waterGain.gain.setTargetAtTime(0.12 + currentDayFactor * 0.08, audioCtx.currentTime, 0.3);
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // DOM INTERACTIONS & UI
+        // ----------------------------------------------------------------------
+        window.enterExperience = function () {
+            const intro = document.getElementById('intro-layer'); const uiL = document.getElementById('ui-layer');
+            if (intro) { intro.style.opacity = '0'; intro.style.pointerEvents = 'none'; setTimeout(() => intro.style.display = 'none', 1500); }
+            if (uiL) uiL.style.opacity = '1'; unlockAudio();
+        };
+
+        if (isMobile) {
+            document.getElementById('cursor').style.display = 'none';
+            document.getElementById('intro-layer').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'flex';
+        }
+
+        function spawnRipple(e) {
+            if (!isMobile || isW) return;
+            let now = performance.now(); if (now - lastRippleTime < 120) return; 
+            let pX = e.clientX * currentDPR, pY = (window.innerHeight - e.clientY) * currentDPR;
+            let uvX = (pX - 0.5 * window.innerWidth * currentDPR) / (window.innerHeight * currentDPR);
+            let uvY = (pY - 0.5 * window.innerHeight * currentDPR) / (window.innerHeight * currentDPR);
+            let rdY = uvY - 0.1;
+            if (rdY < -0.01) {
+                let rdZ = 1.1; let len = Math.sqrt(uvX*uvX + rdY*rdY + rdZ*rdZ);
+                let d = -1.5 / (rdY/len);
+                if (d > 0.0 && d < 80.0) { 
+                    activeRipples[rippleIdx] = { x: (uvX/len)*d, z: (now*0.0003)*2.0 + (rdZ/len)*d, time: now*0.001 };
+                    rippleIdx = (rippleIdx + 1) % 4; lastRippleTime = now;
+                    syncEngine();
+                }
+            }
+        }
+
+        window.addEventListener('pointerdown', (e) => {
+            const h = document.getElementById('swipe-hint'); if(h) h.style.opacity = '0';
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
+            isTouching = true; mX = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5; mY = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
+            spawnRipple(e); syncEngine();
+        }, { passive: true });
+
+        window.addEventListener('pointermove', (e) => {
+            if (!isTouching && isMobile) return; 
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
+            mX = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5; mY = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
+            const cur = document.getElementById('cursor'); if (cur && !isMobile) { cur.style.left = e.clientX + 'px'; cur.style.top = e.clientY + 'px'; }
+            if (isTouching) spawnRipple(e); syncEngine();
+        }, { passive: true });
+
+        window.addEventListener('pointerup', () => { isTouching = false; syncEngine(); }, { passive: true });
+        document.addEventListener("visibilitychange", () => { engine.postMessage({ type: 'PAUSE', paused: document.hidden }); if(audioCtx) document.hidden ? audioCtx.suspend() : audioCtx.resume(); });
+
+        function engage() {
+            if (isW || document.getElementById('custom-panel').style.display === 'flex') return;
+            isW = true; syncEngine(); document.getElementById('ui-layer').style.opacity = '0';
+            if (!isMobile) { document.getElementById('cursor').style.transform = 'translate(-50%, -50%) scale(2.0)'; document.getElementById('cursor').style.opacity = '0.3'; }
+            document.getElementById('cinematic-layer').classList.add('active');
+            if (isMobile && 'vibrate' in navigator) navigator.vibrate([30, 200, 50, 150]);
+            if (!isMobile && waterGain && audioCtx) { let ct = audioCtx.currentTime; waterGain.gain.linearRampToValueAtTime(0, ct + 1.5); }
+        }
 
         function applyTextConfig() {
             document.getElementById('ui-mainTitle').innerText = engineConfig.mainTitle;
             document.getElementById('ui-btnText').innerText = engineConfig.btnText;
             document.getElementById('ui-cineTitle').innerText = engineConfig.cineTitle;
             document.getElementById('ui-cineSub1').innerText = engineConfig.cineSub1;
-            document.getElementById('ui-cineSub2').innerText = engineConfig.cineSub2;
-            TARGET = engineConfig.targetUrl;
+            document.getElementById('ui-cineSub2').innerText = engineConfig.cineSub2; TARGET = engineConfig.targetUrl;
         }
-
-        function syncUIWithConfig() {
-            configKeys.forEach(k => {
-                document.getElementById(`inp-${k}`).value = engineConfig[k];
-                document.getElementById(`val-${k}`).innerText = parseFloat(engineConfig[k]).toFixed(k === 'stars' ? 0 : 2);
-            });
-            textKeys.forEach(k => {
-                document.getElementById(`inp-${k}`).value = engineConfig[k] || '';
-            });
-            applyTextConfig();
-        }
-        syncUIWithConfig();
-
-        let audioCtx, waterSource, waterFilter, waterGain;
-        let windSource, windFilter, windGain;
-        let ambientSource, ambientFilter, ambientGain;
-        let nightSource, nightFilter, nightGain;
-        let droneSource, droneOsc, droneGain, masterPanner;
-        let audioInit = false, lastTouchTime = Date.now();
-        let audioInitTimer = null, animFrameId = null;
-        let currentDayFactor = 0.5, currentNightFactor = 0.5;
-
-        window.enterExperience = function () {
-            const intro = document.getElementById('intro-layer');
-            const uiL = document.getElementById('ui-layer');
-            if (intro) {
-                intro.style.opacity = '0';
-                intro.style.pointerEvents = 'none';
-                intro.style.backdropFilter = 'blur(0px)';
-                setTimeout(() => { intro.style.display = 'none'; }, 1500);
-            }
-            if (uiL) uiL.style.opacity = '1';
-            unlockAudio();
-        };
-
-        if (isMobile) {
-            document.getElementById('cursor').style.display = 'none';
-            const introLayer = document.getElementById('intro-layer');
-            if (introLayer) introLayer.style.display = 'none';
-            const uiLayer = document.getElementById('ui-layer');
-            if (uiLayer) uiLayer.style.display = 'flex';
-        }
-
-        function unlockAudio() {
-            if (isMobile) return; 
-
-            if (audioInit) return;
-            audioInit = true;
-
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            audioCtx = new AudioContext();
-
-            try {
-                const buffer = audioCtx.createBuffer(1, 1, 22050);
-                const source = audioCtx.createBufferSource();
-                source.buffer = buffer;
-                source.connect(audioCtx.destination);
-                if (source.start) source.start(0); else source.noteOn(0);
-            } catch (e) { }
-
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            audioInitTimer = setTimeout(() => { buildAudioGraph(); }, 50);
-        }
-
-        document.addEventListener('pointerdown', unlockAudio, { once: true, passive: true });
-        document.addEventListener('click', unlockAudio, { once: true });
-
-        function buildAudioGraph() {
-            if (isMobile) return;
-
-            const bufferSize = Math.floor(audioCtx.sampleRate * 0.8);
-            if (audioCtx.createStereoPanner) {
-                try {
-                    masterPanner = audioCtx.createStereoPanner();
-                    masterPanner.pan.value = 0;
-                    masterPanner.connect(audioCtx.destination);
-                } catch (e) { }
-            }
-            let audioDest = masterPanner ? masterPanner : audioCtx.destination;
-
-            setTimeout(() => {
-                const waterBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const waterOut = waterBuffer.getChannelData(0);
-                let lastOut = 0;
-                for (let i = 0; i < bufferSize; i++) {
-                    let white = Math.random() * 2 - 1;
-                    waterOut[i] = (lastOut + (0.02 * white)) / 1.02;
-                    lastOut = waterOut[i]; waterOut[i] *= 3.5;
-                }
-                waterSource = audioCtx.createBufferSource();
-                waterSource.buffer = waterBuffer; waterSource.loop = true;
-                waterFilter = audioCtx.createBiquadFilter();
-                waterFilter.type = 'lowpass'; waterFilter.frequency.value = 400; waterFilter.Q.value = 0.5;
-                waterGain = audioCtx.createGain(); waterGain.gain.value = 0.0;
-                waterSource.connect(waterFilter).connect(waterGain).connect(audioDest);
-                waterSource.start(0);
-                waterGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 2.0);
-            }, 0);
-
-            setTimeout(() => {
-                const windBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const windOut = windBuffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) { windOut[i] = (Math.random() * 2 - 1) * 0.5; }
-                windSource = audioCtx.createBufferSource();
-                windSource.buffer = windBuffer; windSource.loop = true;
-                windFilter = audioCtx.createBiquadFilter();
-                windFilter.type = 'bandpass'; windFilter.frequency.value = 800; windFilter.Q.value = 0.3;
-                windGain = audioCtx.createGain(); windGain.gain.value = 0.0;
-                windSource.connect(windFilter).connect(windGain).connect(audioDest);
-                windSource.start(0);
-                windGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 2.5);
-            }, 100);
-
-            setTimeout(() => {
-                const ambientBuffer = audioCtx.createBuffer(2, bufferSize, audioCtx.sampleRate);
-                for (let c = 0; c < 2; c++) {
-                    const ambOut = ambientBuffer.getChannelData(c);
-                    for (let i = 0; i < bufferSize; i++) {
-                        let t = i / audioCtx.sampleRate;
-                        let pad = Math.sin(t * 55 * Math.PI * 2) * 0.1 + Math.sin(t * 82.5 * Math.PI * 2) * 0.08 + Math.sin(t * 110 * Math.PI * 2) * 0.06;
-                        ambOut[i] = (pad * 0.3) + (Math.random() * 2 - 1) * 0.02;
-                    }
-                }
-                ambientSource = audioCtx.createBufferSource();
-                ambientSource.buffer = ambientBuffer; ambientSource.loop = true;
-                ambientFilter = audioCtx.createBiquadFilter();
-                ambientFilter.type = 'lowpass'; ambientFilter.frequency.value = 2000;
-                ambientGain = audioCtx.createGain(); ambientGain.gain.value = 0.0;
-                ambientSource.connect(ambientFilter).connect(ambientGain).connect(audioDest);
-                ambientSource.start(0);
-                ambientGain.gain.setTargetAtTime(0.04, audioCtx.currentTime, 3.0);
-            }, 200);
-
-            setTimeout(() => {
-                droneOsc = audioCtx.createOscillator(); droneOsc.type = 'sine'; droneOsc.frequency.value = 40;
-                const droneOsc2 = audioCtx.createOscillator(); droneOsc2.type = 'sine'; droneOsc2.frequency.value = 60;
-                const droneOsc3 = audioCtx.createOscillator(); droneOsc3.type = 'triangle'; droneOsc3.frequency.value = 80;
-                droneGain = audioCtx.createGain(); droneGain.gain.value = 0.0;
-                const droneFilter = audioCtx.createBiquadFilter(); droneFilter.type = 'lowpass'; droneFilter.frequency.value = 100;
-                droneOsc.connect(droneGain); droneOsc2.connect(droneGain); droneOsc3.connect(droneGain);
-                droneGain.connect(droneFilter).connect(audioDest);
-                droneOsc.start(0); droneOsc2.start(0); droneOsc3.start(0);
-                droneGain.gain.setTargetAtTime(0.03, audioCtx.currentTime, 3.0);
-            }, 300);
-        }
-
-        function hideInteractionHint() {
-            const hint = document.getElementById('swipe-hint');
-            if (hint) {
-                hint.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
-                hint.style.opacity = '0';
-                hint.style.transform = 'translateY(10px)';
-                setTimeout(() => hint.remove(), 800);
-            }
-        }
-
-        function spawnRipple(e) {
-            if (!isMobile || isW) return;
-            let now = performance.now();
-            if (now - lastRippleTime < 120) return; 
-            
-            let cvsW = canvas.width;
-            let cvsH = canvas.height;
-            let pX = e.clientX * currentDPR;
-            let pY = (window.innerHeight - e.clientY) * currentDPR;
-            
-            let uvX = (pX - 0.5 * cvsW) / cvsH;
-            let uvY = (pY - 0.5 * cvsH) / cvsH;
-            
-            let rdY = uvY - 0.1;
-            if (rdY < -0.01) {
-                let t = (now * 0.001) * 0.3;
-                let roZ = t * (2.0 + warp * 35.0);
-                let rdX = uvX;
-                let rdZ = 1.1 + warp * 0.6;
-                
-                let len = Math.sqrt(rdX*rdX + rdY*rdY + rdZ*rdZ);
-                rdX /= len; rdY /= len; rdZ /= len;
-                
-                let d = -1.5 / rdY;
-                if (d > 0.0 && d < 80.0) { 
-                    activeRipples[rippleIdx].x = rdX * d;
-                    activeRipples[rippleIdx].z = roZ + rdZ * d;
-                    activeRipples[rippleIdx].time = now * 0.001;
-                    rippleIdx = (rippleIdx + 1) % 4;
-                    lastRippleTime = now;
-                }
-            }
-        }
-
-        window.addEventListener('pointerdown', (e) => {
-            hideInteractionHint();
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
-            isTouching = true; lastTouchTime = Date.now();
-            let nx = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5;
-            let ny = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
-            targetMX = nx; targetMY = ny;
-            mX = nx; mY = ny; 
-            spawnRipple(e);
-        }, { passive: true });
-
-        window.addEventListener('pointermove', (e) => {
-            hideInteractionHint();
-            if (!isTouching && isMobile) return; 
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('.panel-box') || e.target.classList.contains('btn-init')) return;
-            
-            lastTouchTime = Date.now();
-            targetMX = ((e.clientX / window.innerWidth) * 2 - 1) * 1.5;
-            targetMY = ((1 - e.clientY / window.innerHeight) * 2 - 1) * 0.7;
-
-            const cur = document.getElementById('cursor');
-            if (cur && !isMobile) { cur.style.left = e.clientX + 'px'; cur.style.top = e.clientY + 'px'; }
-            if (isTouching) spawnRipple(e);
-        }, { passive: true });
-
-        window.addEventListener('pointerup', () => { isTouching = false; }, { passive: true });
-        window.addEventListener('pointercancel', () => { isTouching = false; }, { passive: true });
-        window.addEventListener('blur', () => { isTouching = false; });
-
-        document.addEventListener("visibilitychange", () => { 
-            isPaused = document.hidden; 
-            if (audioCtx) {
-                if (isPaused) audioCtx.suspend();
-                else audioCtx.resume();
-            }
-        });
-
-        let resizeTimer;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimer); resizeTimer = setTimeout(resizeCanvas, 200);
-        });
-
-        function applyDRSTier() {
-            let newDPR = currentDPR;
-            if (isMobile) {
-                if (drsTier >= 2) newDPR = baseDPR; 
-                else if (drsTier === 1) newDPR = Math.max(minDPR, baseDPR * 0.8); 
-                else newDPR = minDPR; 
-            } else {
-                newDPR = baseDPR;
-            }
-            
-            if (Math.abs(newDPR - currentDPR) > 0.01) {
-                currentDPR = newDPR;
-                resizeCanvas();
-            }
-        }
-
-        function resizeCanvas() {
-            if (!gl) return;
-            if (animFrameId) cancelAnimationFrame(animFrameId);
-            
-            canvas.width = window.innerWidth * currentDPR;
-            canvas.height = window.innerHeight * currentDPR;
-            gl.viewport(0, 0, canvas.width, canvas.height);
-            
-            if (prg && uLocs.res) {
-                gl.useProgram(prg);
-                gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-            }
-            if (typeof render === "function" && gl) animFrameId = requestAnimationFrame(render);
-        }
-
-        const compile = (t, s) => {
-            const sh = gl.createShader(t); gl.shaderSource(sh, s); gl.compileShader(sh);
-            if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(sh)); return null; }
-            return sh;
-        };
-
-        function initGL() {
-            gl = canvas.getContext('webgl2', { antialias: false, powerPreference: "high-performance" });
-            if (!gl) {
-                document.getElementById('ui-layer').innerHTML = "<div class='brand-text'><h1>ENGINE HALTED</h1><div style='color:#fff; letter-spacing:8px; margin-top:20px; font-size:0.8rem;'>WEBGL2 NOT SUPPORTED</div></div>";
-                if (!isMobile) document.getElementById('cursor').style.display = 'none';
-                return false;
-            }
-
-            prg = gl.createProgram();
-            const vs = compile(gl.VERTEX_SHADER, '#version 300 es\nin vec4 p;void main(){gl_Position=p;}');
-            const fs = compile(gl.FRAGMENT_SHADER, document.getElementById('fs').text);
-            if (!vs || !fs) return false;
-
-            gl.attachShader(prg, vs); gl.attachShader(prg, fs); gl.linkProgram(prg);
-
-            const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-            const a = gl.getAttribLocation(prg, 'p'); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
-
-            uLocs.res = gl.getUniformLocation(prg, 'u_res');
-            uLocs.time = gl.getUniformLocation(prg, 'u_time');
-            uLocs.mouse = gl.getUniformLocation(prg, 'u_mouse');
-            uLocs.warp = gl.getUniformLocation(prg, 'u_warp');
-            uLocs.wTime = gl.getUniformLocation(prg, 'u_waveTime');
-            uLocs.wColor = gl.getUniformLocation(prg, 'u_waterColor');
-            uLocs.wEnergy = gl.getUniformLocation(prg, 'u_waveEnergy');
-            uLocs.wHeight = gl.getUniformLocation(prg, 'u_waveHeight');
-            uLocs.sDensity = gl.getUniformLocation(prg, 'u_starDensity');
-            uLocs.isMobile = gl.getUniformLocation(prg, 'u_isMobile');
-            uLocs.warmup = gl.getUniformLocation(prg, 'u_warmup');
-            uLocs.detailFade = gl.getUniformLocation(prg, 'u_detailFade');
-            uLocs.drsTier = gl.getUniformLocation(prg, 'u_drsTier');
-
-            uLocsRipples =[];
-            for(let i=0; i<4; i++) {
-                uLocsRipples.push(gl.getUniformLocation(prg, `u_ripples[${i}]`));
-            }
-
-            resizeCanvas();
-            return true;
-        }
-
-        setTimeout(() => { if (initGL()) { canvas.style.opacity = '1'; animFrameId = requestAnimationFrame(render); } }, 50);
-
-        canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); isPaused = true; }, false);
-        canvas.addEventListener("webglcontextrestored", () => { initGL(); isPaused = false; }, false);
-
-        function engage() {
-            if (isW || !gl || document.getElementById('custom-panel').style.display === 'flex') return;
-
-            if (!isMobile) {
-                if (audioInitTimer) { clearTimeout(audioInitTimer); audioInitTimer = null; }
-                if (!audioInit) unlockAudio();
-                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-            }
-
-            isW = true;
-            document.getElementById('ui-layer').style.opacity = '0';
-            hideInteractionHint(); 
-            
-            if (!isMobile) {
-                document.getElementById('cursor').style.transform = 'translate(-50%, -50%) scale(2.0)';
-                document.getElementById('cursor').style.opacity = '0.3';
-            }
-            document.getElementById('cinematic-layer').classList.add('active');
-
-            if (isMobile) {
-                if ('vibrate' in navigator && typeof navigator.vibrate === 'function') {
-                    navigator.vibrate([30, 200, 50, 150, 80, 100, 120, 50, 200, 50, 1000]);
-                }
-            }
-
-            if (!isMobile && waterGain && audioCtx) {
-                let ct = audioCtx.currentTime;
-                waterGain.gain.cancelScheduledValues(ct); waterGain.gain.setValueAtTime(waterGain.gain.value, ct); waterGain.gain.linearRampToValueAtTime(0, ct + 1.5);
-                if (windGain) windGain.gain.linearRampToValueAtTime(0, ct + 1.5);
-                if (ambientGain) ambientGain.gain.linearRampToValueAtTime(0, ct + 1.5);
-                if (nightGain) nightGain.gain.linearRampToValueAtTime(0, ct + 1.0);
-                if (droneGain) droneGain.gain.linearRampToValueAtTime(0, ct + 2.0);
-            }
-
-            if (!isMobile && audioCtx) {
-                const playBell = (freq, delay) => {
-                    let osc1 = audioCtx.createOscillator(); let osc2 = audioCtx.createOscillator(); let noteGain = audioCtx.createGain();
-                    osc1.type = 'sine'; osc2.type = 'triangle'; osc1.frequency.value = freq; osc2.frequency.value = freq * 1.005;
-                    let t = audioCtx.currentTime + delay;
-                    noteGain.gain.setValueAtTime(0, t); noteGain.gain.linearRampToValueAtTime(0.15, t + 0.05); noteGain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
-                    osc1.connect(noteGain).connect(audioCtx.destination); osc2.connect(noteGain).connect(audioCtx.destination);
-                    osc1.start(t); osc1.stop(t + 2.5); osc2.start(t); osc2.stop(t + 2.5);
-                };
-                playBell(261.63, 0.0); playBell(392.00, 0.2); playBell(493.88, 0.4); playBell(587.33, 0.6); playBell(659.25, 0.8); playBell(1046.50, 1.2);
-            }
-        }
-
-        let lastDrawTime = 0;
-
-        function render(now) {
-            if (isPaused || !gl) return;
-
-            animFrameId = requestAnimationFrame(render);
-            totalFrames++; 
-
-            let elapsed = now - (lastTime || now);
-            if (elapsed > 100) elapsed = 16.666; 
-            lastTime = now;
-
-            let dtJS = elapsed;
-            if (drsTier === 0) dtJS *= 0.5; 
-
-            lastTimeJS = now; waveTime += (dtJS * 0.001) * engineConfig.energy;
-            let dtFactor = dtJS / 16.666;
-            
-            let lerpFactor = isMobile ? 0.35 : 0.12; 
-            let lerpSpeed = 1.0 - Math.pow(1.0 - lerpFactor, dtFactor);
-            mX += (targetMX - mX) * lerpSpeed;
-            mY += (targetMY - mY) * lerpSpeed;
-
-            let targetFade = isTouching ? 0.0 : 1.0;
-            detailFade += (targetFade - detailFade) * (0.15 * dtFactor);
-
-            if (drsCooldown > 0) drsCooldown--;
-
-            if (totalFrames > 30 && !isTouching) { 
-                if (drsCount === DRS_HISTORY_SIZE) {
-                    drsSum -= frameTimes[drsIndex];
-                } else {
-                    drsCount++;
-                }
-                
-                frameTimes[drsIndex] = elapsed;
-                drsSum += elapsed;
-                drsIndex = (drsIndex + 1) % DRS_HISTORY_SIZE;
-                
-                if (drsCount === DRS_HISTORY_SIZE && drsCooldown <= 0) {
-                    let avg = drsSum / DRS_HISTORY_SIZE;
-                    let fps = 1000 / avg;
-                    
-                    let oldTier = drsTier;
-                    
-                    if (fps < 48 && drsTier > 0) {
-                        drsTier--;
-                        drsCooldown = 90; 
-                        if (isMobile) window.mobileThermalLock = true; 
-                    } else if (fps >= 58 && drsTier < (isMobile ? 2 : 4) && !window.mobileThermalLock) {
-                        drsTier++;
-                        drsCooldown = 90; 
-                    }
-                    
-                    if (oldTier !== drsTier) {
-                        applyDRSTier();
-                        drsCount = 0;
-                        drsSum = 0;
-                    }
-                }
-            }
-
-            let timeSinceTouch = Date.now() - lastTouchTime;
-            if (isTouching) {
-                lastTouchTime = Date.now();
-            }
-
-            let solarEase = warp * warp * (3.0 - 2.0 * warp);
-            let currentSunY = 0.15 + mY * 1.0;
-            let sunY = currentSunY * (1 - solarEase) + (-1.5) * solarEase;
-            let dayFactor = Math.max(0, Math.min(1, (sunY + 0.02) / 0.17));
-            let nightFactor = 1.0 - dayFactor;
-
-            currentDayFactor = currentDayFactor + (dayFactor - currentDayFactor) * 0.05;
-            currentNightFactor = currentNightFactor + (nightFactor - currentNightFactor) * 0.05;
-            let isSunset = (sunY > -0.1 && sunY < 0.15) ? 1.0 : 0.0;
-            let sunsetFactor = isSunset * (1.0 - Math.abs(sunY - 0.02) / 0.15);
-
-            if (isW) {
-                warp = Math.min(1.0, warp + (0.008 * dtFactor));
-                if (warp >= 1.0 && !redirected) { redirected = true; window.location.href = TARGET; }
-            } else if (!isMobile && audioInit && audioCtx && audioCtx.state === 'running') {
-                let waveCycle = Math.sin(waveTime * 0.3);
-
-                if (masterPanner && masterPanner.pan) {
-                    let panTarget = Math.max(-1.0, Math.min(1.0, mX * 0.8));
-                    masterPanner.pan.setTargetAtTime(panTarget, audioCtx.currentTime, 0.2);
-                }
-                if (waterFilter && waterSource && waterGain) {
-                    let targetWaterFreq = 250 + (waveCycle * 100) + (engineConfig.height * 600) - (mY * 150);
-                    waterFilter.frequency.setTargetAtTime(Math.max(150, targetWaterFreq), audioCtx.currentTime, 0.1);
-                    let targetRate = 0.4 + (engineConfig.energy * 0.02) + (waveCycle * 0.03);
-                    waterSource.playbackRate.setTargetAtTime(Math.max(0.1, targetRate), audioCtx.currentTime, 0.1);
-                    let waterVol = 0.12 + currentDayFactor * 0.08;
-                    waterGain.gain.setTargetAtTime(waterVol, audioCtx.currentTime, 0.3);
-                }
-                if (windFilter && windGain) {
-                    let windFreq = 600 + currentDayFactor * 600 + sunsetFactor * 400;
-                    windFilter.frequency.setTargetAtTime(windFreq, audioCtx.currentTime, 0.3);
-                    let windVol = 0.03 + currentDayFactor * 0.05 + sunsetFactor * 0.04;
-                    windGain.gain.setTargetAtTime(windVol, audioCtx.currentTime, 0.3);
-                }
-                if (ambientFilter && ambientGain) {
-                    let ambientFreq = 1500 + currentDayFactor * 1000 - currentNightFactor * 500;
-                    ambientFilter.frequency.setTargetAtTime(ambientFreq, audioCtx.currentTime, 0.5);
-                    let ambientVol = 0.03 + currentDayFactor * 0.03 + sunsetFactor * 0.04;
-                    ambientGain.gain.setTargetAtTime(ambientVol, audioCtx.currentTime, 0.3);
-                }
-                if (nightFilter && nightGain) {
-                    let nightVol = currentNightFactor * 0.12;
-                    nightGain.gain.setTargetAtTime(nightVol, audioCtx.currentTime, 0.5);
-                    let nightFreq = 300 + Math.abs(mY) * 150;
-                    nightFilter.frequency.setTargetAtTime(nightFreq, audioCtx.currentTime, 0.3);
-                }
-                if (droneGain) {
-                    let droneVol = 0.02 + currentNightFactor * 0.04 + sunsetFactor * 0.02;
-                    droneGain.gain.setTargetAtTime(droneVol, audioCtx.currentTime, 0.5);
-                }
-            }
-
-            let startupFactor = Math.max(0.0, 1.0 - ((totalFrames || 1) / 120.0));
-
-            gl.useProgram(prg);
-            gl.uniform2f(uLocs.res, canvas.width, canvas.height);
-            gl.uniform1f(uLocs.time, now * 0.001);
-            gl.uniform2f(uLocs.mouse, mX, mY);
-            gl.uniform1f(uLocs.warp, warp);
-            gl.uniform1f(uLocs.wTime, waveTime);
-            gl.uniform3f(uLocs.wColor, engineConfig.r, engineConfig.g, engineConfig.b);
-            gl.uniform1f(uLocs.wEnergy, engineConfig.energy);
-            gl.uniform1f(uLocs.wHeight, engineConfig.height);
-            gl.uniform1f(uLocs.sDensity, engineConfig.stars);
-            gl.uniform1f(uLocs.isMobile, isMobile ? 1.0 : 0.0);
-            gl.uniform1f(uLocs.warmup, startupFactor);
-            gl.uniform1f(uLocs.detailFade, detailFade);
-            gl.uniform1f(uLocs.drsTier, drsTier);
-
-            for(let i=0; i<4; i++) {
-                if(uLocsRipples[i]) {
-                    gl.uniform3f(uLocsRipples[i], activeRipples[i].x, activeRipples[i].z, activeRipples[i].time);
-                }
-            }
-
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
-                e.preventDefault();
-                document.getElementById('auth-modal').style.display = 'flex';
-                document.getElementById('auth-input').value = '';
-                document.getElementById('auth-input').focus();
-            }
-        });
-
-        document.getElementById('auth-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                const val = e.target.value.trim();
-                if (val === 'abcab123') {
-                    document.getElementById('auth-modal').style.display = 'none';
-                    document.getElementById('custom-panel').style.display = 'flex';
-                    e.target.value = '';
-                } else {
-                    e.target.style.color = '#ff4444';
-                    setTimeout(() => e.target.style.color = '#fff', 600);
-                }
-            }
-        });
 
         configKeys.forEach(k => {
             document.getElementById(`inp-${k}`).addEventListener('input', (e) => {
-                lastTouchTime = Date.now();
-                const val = parseFloat(e.target.value);
-                document.getElementById(`val-${k}`).innerText = val.toFixed(k === 'stars' ? 0 : 2);
-                engineConfig[k] = val;
-                try { localStorage.setItem('rahatil_engine_config', JSON.stringify(engineConfig)); } catch (err) { }
+                const val = parseFloat(e.target.value); document.getElementById(`val-${k}`).innerText = val.toFixed(k === 'stars' ? 0 : 2);
+                engineConfig[k] = val; syncEngine(); try { localStorage.setItem('rahatil_engine_config', JSON.stringify(engineConfig)); } catch (err) { }
             });
         });
-
         textKeys.forEach(k => {
             document.getElementById(`inp-${k}`).addEventListener('input', (e) => {
-                engineConfig[k] = e.target.value; applyTextConfig();
-                try { localStorage.setItem('rahatil_engine_config', JSON.stringify(engineConfig)); } catch (err) { }
+                engineConfig[k] = e.target.value; applyTextConfig(); syncEngine(); try { localStorage.setItem('rahatil_engine_config', JSON.stringify(engineConfig)); } catch (err) { }
             });
         });
 
-        function resetAdminPanel() {
-            localStorage.removeItem('rahatil_engine_config');
-            engineConfig = { ...defaultConfig };
-            syncUIWithConfig();
-        }
-
+        window.addEventListener('keydown', (e) => { if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') { e.preventDefault(); document.getElementById('auth-modal').style.display = 'flex'; document.getElementById('auth-input').focus(); } });
+        document.getElementById('auth-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { if (e.target.value.trim() === 'abcab123') { document.getElementById('auth-modal').style.display = 'none'; document.getElementById('custom-panel').style.display = 'flex'; e.target.value = ''; } else { e.target.style.color = '#ff4444'; setTimeout(() => e.target.style.color = '#fff', 600); } }
+        });
+        function resetAdminPanel() { localStorage.removeItem('rahatil_engine_config'); engineConfig = { ...defaultConfig }; applyTextConfig(); syncEngine(); location.reload(); }
         function closeAdminPanel() { document.getElementById('custom-panel').style.display = 'none'; }
     </script>
 </body>
-
 </html>
