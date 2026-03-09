@@ -296,22 +296,8 @@
             text-align: center;
         }
 
-        .cine-sub {
-            font-size: 0.65rem;
-            color: rgba(220, 225, 235, 0.85);
-            letter-spacing: 12px;
-            text-transform: uppercase;
-            opacity: 0;
-            transform: translateY(15px);
-            transition: all 0.6s ease;
-            text-align: center;
-            text-shadow: 0 4px 15px rgba(0, 0, 5, 0.6);
-        }
-
         #cinematic-layer.active { opacity: 1; }
         #cinematic-layer.active .cine-title { opacity: 1; transform: translateY(0); letter-spacing: 28px; transition-delay: 0.1s; }
-        #cinematic-layer.active .cine-sub:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.4s; }
-        #cinematic-layer.active .cine-sub:nth-child(3) { opacity: 1; transform: translateY(0); color: rgba(255, 252, 248, 0.95); transition-delay: 0.8s; }
 
         #cursor {
             position: fixed;
@@ -406,7 +392,6 @@
             .btn-init { font-size: 0.6rem; letter-spacing: 10px; margin-top: 50px; }
             .btn-init:hover { letter-spacing: 12px; }
             .cine-title { font-size: 1.5rem; letter-spacing: 8px; }
-            .cine-sub { font-size: 0.5rem; letter-spacing: 6px; }
             #cinematic-layer.active .cine-title { letter-spacing: 15px; }
             .panel-box { padding: 20px; gap: 12px; }
             .panel-box h3 { font-size: 1rem; letter-spacing: 5px; }
@@ -446,8 +431,6 @@
 
     <div id="cinematic-layer">
         <div class="cine-title" id="ui-cineTitle">Welcome, Rahatil</div>
-        <div class="cine-sub" id="ui-cineSub1">Calibrating Tidal Engine...</div>
-        <div class="cine-sub" id="ui-cineSub2">Redirecting to Terminal</div>
     </div>
 
     <div id="auth-modal" class="overlay-layer">
@@ -496,14 +479,6 @@
             <div class="slider-group">
                 <label>Cinematic Title</label>
                 <input type="text" id="inp-cineTitle" class="text-input">
-            </div>
-            <div class="slider-group">
-                <label>Subtext 1</label>
-                <input type="text" id="inp-cineSub1" class="text-input">
-            </div>
-            <div class="slider-group">
-                <label>Subtext 2</label>
-                <input type="text" id="inp-cineSub2" class="text-input">
             </div>
             <div class="slider-group">
                 <label>Redirect URL</label>
@@ -795,11 +770,9 @@ void main() {
         col += vec3(0.04, 0.05, 0.1) * (exp2(8.0 * log2(moonDot + 0.0001)) * 0.15 + exp2(25.0 * log2(moonDot + 0.0001)) * 0.08) * trueNight;
     }
 
-    // PRODUCTION HORIZON SEAM RESOLUTION
     if(rd.y < 0.0) {
-        float d = -(ro.y) / min(rd.y, -0.0001); // Prevent Division-by-Zero, expand valid ray boundaries
+        float d = -(ro.y) / min(rd.y, -0.0001); 
         
-        // GPU optimization loop: Skip rendering water geometry fully if engulfed in pure fog
         if (d < 250.0) {
             vec3 p = ro + rd * d;
             
@@ -850,14 +823,8 @@ void main() {
             float diffuseMoon = max(0.0, dot(N_smooth, waterMoonDir));
             waterCol += (vec3(0.02, 0.028, 0.05) + tidalColor * 0.15) * (diffuseMoon * 0.4) * trueNight;
             
-            // SEAMLESS BLEND MATRIX:
-            // Calculate atmospheric fog attenuation correlating strictly with ray distance.
             float fogFactor = smoothstep(40.0, 200.0, d);
-            
-            // Retain deep ocean aesthetic dynamically under night thresholds
             waterCol -= waterCol * (trueNight * 0.25 * smoothstep(20.0, 100.0, d));
-            
-            // Finalize: Inject generated water color perfectly into pre-computed environmental sky boundary (`col`)
             col = mix(waterCol, col, fogFactor);
         }
     }
@@ -892,7 +859,6 @@ void main() {
         let isPaused = false;
         let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
 
-        // 🚀 START FAST, SCALE UP: Mobile starts at Tier 1 (Optimized Wave, Smooth). PC starts at Tier 4 (Ultra).
         let drsTier = isMobile ? 1 : 4; 
         let drsCooldown = 0;
         window.mobileThermalLock = false; 
@@ -906,17 +872,15 @@ void main() {
         let baseDPR = isMobile ? Math.min(window.devicePixelRatio, 1.0) : Math.min(window.devicePixelRatio, 2.0);
         let minDPR = isMobile ? 0.6 : baseDPR;
         
-        // Mobile starts at 0.8x resolution immediately to guarantee 60fps frame 1.
         let currentDPR = isMobile ? baseDPR * 0.8 : baseDPR; 
         let lastTime = performance.now();
 
         const configKeys =['energy', 'height', 'stars', 'r', 'g', 'b'];
-        const textKeys =['mainTitle', 'btnText', 'cineTitle', 'cineSub1', 'cineSub2', 'targetUrl'];
+        const textKeys =['mainTitle', 'btnText', 'cineTitle', 'targetUrl'];
 
         const defaultConfig = {
             energy: 2.2, height: 0.05, stars: 600.0, r: 0.01, g: 0.04, b: 0.08,
             mainTitle: "RAHATIL", btnText: "Initialize", cineTitle: "Welcome, Rahatil",
-            cineSub1: "Calibrating Tidal Engine...", cineSub2: "Redirecting to Terminal",
             targetUrl: "https://www.linkedin.com/in/rahatreza100/"
         };
 
@@ -932,8 +896,6 @@ void main() {
             document.getElementById('ui-mainTitle').innerText = engineConfig.mainTitle;
             document.getElementById('ui-btnText').innerText = engineConfig.btnText;
             document.getElementById('ui-cineTitle').innerText = engineConfig.cineTitle;
-            document.getElementById('ui-cineSub1').innerText = engineConfig.cineSub1;
-            document.getElementById('ui-cineSub2').innerText = engineConfig.cineSub2;
             TARGET = engineConfig.targetUrl;
         }
 
@@ -955,10 +917,10 @@ void main() {
         let nightSource, nightFilter, nightGain;
         let droneSource, droneOsc, droneGain, masterPanner;
         
-        // Melodic generative variables
-        let melodyScale =[196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25]; // Cinematic Pentatonic
+        // Melodic generative variables (Expanded Cinematic Lydian/Pentatonic spread)
+        let melodyScale =[130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33]; 
         let nextNoteTime = 0;
-        let melodyDelay, melodyFeedback, melodyGain, melodyFilter;
+        let melodyDelay, melodyFeedback, melodyGain;
 
         let audioInit = false, lastTouchTime = Date.now();
         let audioInitTimer = null, animFrameId = null;
@@ -1041,7 +1003,7 @@ void main() {
                 waterGain.gain.setTargetAtTime(0.15, audioCtx.currentTime, 2.0);
             }, 0);
 
-            // CTO Directive: Complete Wind and Melodic Resonance Rework
+            // CTO Directive: Drastically softened wind synthesis
             setTimeout(() => {
                 const windBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const windOut = windBuffer.getChannelData(0);
@@ -1058,12 +1020,12 @@ void main() {
 
                 windLowpass = audioCtx.createBiquadFilter();
                 windLowpass.type = 'lowpass'; 
-                windLowpass.frequency.value = 1000;
+                windLowpass.frequency.value = 600; // Lowered to kill harsh treble entirely
 
                 windFilter = audioCtx.createBiquadFilter();
                 windFilter.type = 'bandpass'; 
                 windFilter.frequency.value = 350; 
-                windFilter.Q.value = 1.8;
+                windFilter.Q.value = 1.2;
 
                 windFreqLFO = audioCtx.createOscillator();
                 windFreqLFO.type = 'sine';
@@ -1086,18 +1048,17 @@ void main() {
                     let resFilter = audioCtx.createBiquadFilter();
                     resFilter.type = 'bandpass';
                     resFilter.frequency.value = freq;
-                    resFilter.Q.value = 45.0; 
+                    resFilter.Q.value = 40.0; 
 
                     let resGain = audioCtx.createGain();
-                    resGain.gain.value = 0.05;
+                    resGain.gain.value = 0.03;
 
                     windLowpass.connect(resFilter).connect(resGain).connect(windGain);
                     window.windResonators.push({ filter: resFilter, gain: resGain, baseFreq: freq });
                 });
 
                 windSource.start(0);
-                // Lowered initial target
-                windGain.gain.setTargetAtTime(0.015, audioCtx.currentTime, 2.5);
+                windGain.gain.setTargetAtTime(0.005, audioCtx.currentTime, 2.5); // Massively reduced baseline wind
             }, 100);
 
             setTimeout(() => {
@@ -1132,70 +1093,82 @@ void main() {
                 droneGain.gain.setTargetAtTime(0.03, audioCtx.currentTime, 3.0);
             }, 300);
 
-            // Melody Synth Architecture
+            // CTO Directive: Beautiful Emotional Melody Reverb Network
             setTimeout(() => {
                 melodyGain = audioCtx.createGain();
-                melodyGain.gain.value = 0.5;
+                melodyGain.gain.value = 0.6; // Slightly boosted output for presence
 
                 melodyDelay = audioCtx.createDelay(5.0);
-                melodyDelay.delayTime.value = 0.85; 
+                melodyDelay.delayTime.value = 1.2; // Grand spaciousness
 
                 melodyFeedback = audioCtx.createGain();
-                melodyFeedback.gain.value = 0.65; // High feedback for ethereal pad-like echo
+                melodyFeedback.gain.value = 0.7; // Lush long trails
 
-                melodyFilter = audioCtx.createBiquadFilter();
-                melodyFilter.type = "lowpass";
-                melodyFilter.frequency.value = 1200;
+                let melodyLowpass = audioCtx.createBiquadFilter();
+                melodyLowpass.type = "lowpass";
+                melodyLowpass.frequency.value = 1000;
 
-                melodyDelay.connect(melodyFilter).connect(melodyFeedback).connect(melodyDelay);
+                melodyDelay.connect(melodyLowpass).connect(melodyFeedback).connect(melodyDelay);
                 melodyDelay.connect(melodyGain);
                 melodyGain.connect(audioDest);
             }, 400);
         }
 
-        // Generative Interaction Logic
+        // CTO Directive: Generative Interactive Ambient Synthesis
         function processMelody() {
             if (!isW || isPaused || !audioCtx || audioCtx.state !== 'running' || !melodyGain) return;
             
             let ct = audioCtx.currentTime;
             if (ct >= nextNoteTime) {
-                // Map Y to pitch (inverse mapping so high Y = high pitch)
+                // Inversely map Y to pitch (High screen = high pitch, Low screen = deep emotional sub-bass)
                 let normY = Math.max(0.0, Math.min(1.0, (mY + 0.7) / 1.4));
                 let baseIndex = Math.floor((1.0 - normY) * (melodyScale.length - 1));
                 
-                let idx = Math.max(0, Math.min(melodyScale.length - 1, baseIndex + Math.floor(Math.random() * 3 - 1)));
+                let idx = Math.max(0, Math.min(melodyScale.length - 1, baseIndex + Math.floor(Math.random() * 2)));
                 let freq = melodyScale[idx];
 
-                if (Math.abs(mX) > 0.5 && Math.random() > 0.6) freq *= 2.0;
-
-                let osc1 = audioCtx.createOscillator();
-                let osc2 = audioCtx.createOscillator();
-                let env = audioCtx.createGain();
+                let osc1 = audioCtx.createOscillator(); // Warm Fundamental
+                let osc2 = audioCtx.createOscillator(); // Analog Shimmer
+                let noteEnv = audioCtx.createGain();
+                let noteFilter = audioCtx.createBiquadFilter();
+                let notePanner = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : audioCtx.createGain();
 
                 osc1.type = 'sine';
                 osc2.type = 'triangle';
                 osc1.frequency.value = freq;
-                osc2.frequency.value = freq * 1.003; 
+                osc2.frequency.value = freq * 1.008; // Chorus detuning
 
-                env.gain.value = 0;
+                // Dynamic tone shaping based on cursor height
+                noteFilter.type = 'lowpass';
+                noteFilter.frequency.setValueAtTime(400 + Math.random() * 400 + (1.0 - normY) * 1000, ct);
+
+                if (notePanner.pan) {
+                    notePanner.pan.value = mX * 0.7; // Panned dynamically to cursor X
+                }
+
+                noteEnv.gain.value = 0;
                 
-                let vel = 0.02 + Math.abs(mX) * 0.05;
+                // Volume responsive to horizontal cursor reach
+                let vel = 0.03 + Math.abs(mX) * 0.02;
 
-                env.gain.setValueAtTime(0, ct);
-                env.gain.linearRampToValueAtTime(vel, ct + 0.2); 
-                env.gain.exponentialRampToValueAtTime(0.0001, ct + 4.0); 
+                // Long cinematic breathing envelope
+                noteEnv.gain.setValueAtTime(0, ct);
+                noteEnv.gain.linearRampToValueAtTime(vel, ct + 1.2); // Slow emotional swell
+                noteEnv.gain.exponentialRampToValueAtTime(0.0001, ct + 7.0); // Endless decay
 
-                osc1.connect(env);
-                osc2.connect(env);
-                env.connect(melodyGain); 
-                env.connect(melodyDelay); 
+                osc1.connect(noteFilter);
+                osc2.connect(noteFilter);
+                noteFilter.connect(noteEnv);
+                noteEnv.connect(notePanner);
+                notePanner.connect(melodyGain); 
+                notePanner.connect(melodyDelay); 
 
-                osc1.start(ct); osc1.stop(ct + 4.5);
-                osc2.start(ct); osc2.stop(ct + 4.5);
+                osc1.start(ct); osc1.stop(ct + 7.5);
+                osc2.start(ct); osc2.stop(ct + 7.5);
 
-                // Determine rhythmic spacing via X axis
-                let speedFactor = 1.0 - (Math.abs(mX) * 0.6); // 1.0 down to 0.4
-                let timeDelta = (Math.random() * 1.5 + 0.5) * speedFactor;
+                // Rhythmic cascade. Fast on edges, slow and contemplative in the center.
+                let speedFactor = 1.0 - (Math.abs(mX) * 0.5); 
+                let timeDelta = (Math.random() * 2.0 + 1.5) * speedFactor;
                 nextNoteTime = ct + timeDelta;
             }
         }
@@ -1237,7 +1210,6 @@ void main() {
         window.addEventListener('pointercancel', () => { isTouching = false; }, { passive: true });
         window.addEventListener('blur', () => { isTouching = false; });
 
-        // CTO BUG FIX: Zero-stall Tab switching & accurate audio suspension
         document.addEventListener("visibilitychange", () => { 
             isPaused = document.hidden; 
             if (audioCtx) {
@@ -1485,7 +1457,7 @@ void main() {
                     waterGain.gain.setTargetAtTime(waterVol, audioCtx.currentTime, 0.3);
                 }
                 
-                // NEW WIND MODULATION: Drastically lowered base volume.
+                // NEW WIND MODULATION: Whispering volume
                 if (windFilter && windGain && windFreqLFO && windFreqLFOGain) {
                     let baseWindFreq = 300 + currentDayFactor * 150 + sunsetFactor * 100 - (mY * 100);
                     windFilter.frequency.setTargetAtTime(baseWindFreq, audioCtx.currentTime, 0.5);
@@ -1507,7 +1479,7 @@ void main() {
                     }
 
                     // CTO Fix: Massively reduced wind volume scalar
-                    let windVol = 0.015 + currentDayFactor * 0.01 + sunsetFactor * 0.01 + Math.abs(mY) * 0.01;
+                    let windVol = 0.004 + currentDayFactor * 0.005 + sunsetFactor * 0.005 + Math.abs(mY) * 0.005;
                     windGain.gain.setTargetAtTime(windVol, audioCtx.currentTime, 0.3);
                 }
 
